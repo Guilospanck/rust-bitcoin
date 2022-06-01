@@ -3,6 +3,18 @@ use sha256::digest;
 
 const BLOCKCHAIN_DIFFICULTY: f32 = 1.00;
 
+///
+///  Bitcoin’s difficulty level is the estimated number of hashes required to mine a block.
+/// 
+///  Difficulty Level = Difficulty Target/Current Target.
+/// 
+///   => Difficulty Target = bits of block header
+/// 
+/// Note that the Difficulty Target is a hexadecimal notation of the target hash whose mining difficulty is 1.
+/// 
+/// In contrast, the current target is the target hash of the most recent block of transactions.
+/// When the two values are divided, it yields a whole number which is the difficulty level of mining bitcoin
+
 #[derive(Debug, Serialize, Deserialize)]
 struct DataToMintBlock {
   previous_block_hash: String,
@@ -14,7 +26,16 @@ fn mint_block(data: DataToMintBlock) -> u32 {
   let stringfied = serde_json::to_string(&data).unwrap();
 
   let nonce: u32 = 1;
-  let hash = digest(stringfied);
+  let hash = digest(&stringfied);
+
+  let mut zeros_count: u32 = 0;
+
+  // for c in stringfied.chars() {
+  //   if c != '0' || zeros_count >= BLOCKCHAIN_DIFFICULTY {
+  //     break
+  //   }
+  //   zeros_count = zeros_count+1;    
+  // }
 
   println!("{}", hash);
 
