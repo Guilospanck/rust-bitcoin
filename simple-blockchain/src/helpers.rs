@@ -1,4 +1,4 @@
-use num::bigint::BigUint;
+use num::bigint::{BigUint, BigInt};
 use sha256::digest;
 use num::pow::pow;
 
@@ -13,6 +13,8 @@ use crate::block::{Transaction, BlockHeader};
 /// 
 ///  When the two values are divided, it yields a whole number which is the difficulty level of mining bitcoin.
 const DIFFICULTY_LEVEL: f32 = 1.00;
+
+const MAX_NONCE: u32 = 4_294_967_295; // 32 bits 2^32 -1 
 
 /// This function gets the "target" representation of some "bits".
 /// It returns a String with the hexadecimal representation (32 Bytes - 64 chars) of the target.
@@ -38,13 +40,18 @@ pub fn get_target_representation(bits: u32) -> String {
   let decimal_coefficient = u128::from_str_radix(coefficient, 16).unwrap();
   let target_two_pow: u16 = 8 * (decimal_exponent - 3);
   let pow_formula = pow(BigUint::from(2u8), target_two_pow as usize); // 2 ^(8*(exponent-3)
-  let target = BigUint::from(decimal_coefficient * pow_formula); // target = coefficient * 2 ^(8*(exponent-3))
-  println!("{}", target);
-  let target = format!("{:x}", target);
+  let target = BigUint::from(decimal_coefficient * pow_formula); // target = coefficient * 2 ^(8*(exponent-3))  
+  
+  let target = format!("{:x}", target);  
 
   let hexa_length = target.len();
-  let num_zeros_to_add = 64 - hexa_length;
-  let mut zeros = vec!["0"; num_zeros_to_add].join("");
+
+  let mut zeros = "".to_owned();
+  if hexa_length < 64 {    
+    let num_zeros_to_add = 64 - hexa_length;
+    zeros = vec!["0"; num_zeros_to_add].join("");
+  }
+
   zeros.push_str(&target);
 
   let target = zeros;
@@ -125,22 +132,24 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
   }
 }
 
-pub fn mint_block(block_header: BlockHeader) -> u32 {
-  let stringfied = serde_json::to_string(&block_header).unwrap();
+/// This is a basic proof of work algorithm.
+pub fn mint_block(block_header: &mut BlockHeader) -> () {  
+  let target = get_target_representation(block_header.bits);
+  let decimal_target = BigInt::parse_bytes(&target.as_bytes(), 16).unwrap();  
+  
+  // println!("hash target: {}", target);
 
-  let nonce: u32 = 0;
-  let hash = digest(&stringfied);
+  for nonce in 0..MAX_NONCE {
+    block_header.nonce = nonce;
+    let stringfied = serde_json::to_string(&block_header).unwrap();
+    let hash = digest(&stringfied);
+    let decimal_hash = BigInt::parse_bytes(&hash.as_bytes(), 16).unwrap();
 
-  let mut zeros_count: u32 = 0;
+    println!("dec target: {}", decimal_target);
+    println!("hash:   {}", decimal_hash);
 
-  // for c in stringfied.chars() {
-  //   if c != '0' || zeros_count >= DIFFICULTY_LEVEL {
-  //     break
-  //   }
-  //   zeros_count = zeros_count+1;
-  // }
-
-  println!("{}", hash);
-
-  1
+    if decimal_hash <= decimal_target {
+      return
+    }
+  }
 }
