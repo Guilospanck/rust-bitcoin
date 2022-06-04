@@ -1,22 +1,22 @@
 use num::bigint::{BigUint, BigInt};
-use sha256::digest;
 use num::pow::pow;
+use sha256::digest;
 
-use crate::block::{Transaction, BlockHeader};
+use crate::block::{BlockHeader};
+use crate::transaction::{Transaction};
 
 ///  Bitcoin’s difficulty level is the estimated number of hashes required to mine a block.
 ///
-///  `Difficulty Level = Difficulty Target/Current Target.`
+///  `Difficulty Level = Genesis Target/Difficulty Target.`
 ///
-///  - `Difficulty Target (in decimal format)` = bits of the Genesis block header in the *target* format (Note that the Difficulty Target is a hexadecimal notation of the target hash whose mining difficulty is 1).
-///  - `Current Target (in decimal format)` = In contrast, the current target is the *target* hash of the most recent block of transactions.
+///  - `Genesis Target (in decimal format)` = bits of the Genesis block header in the *target* format (hexadecimal notation of the target hash whose mining difficulty is 1).
+///  - `Difficulty Target (in decimal format)` = In contrast, the difficulty target is the *target* hash of the most recent block of transactions.
 /// 
-///  When the two values are divided, it yields a whole number which is the difficulty level of mining bitcoin.
+///  When the two values are divided, it yields a whole number which is the difficulty level of mining Bitcoin.
 const DIFFICULTY_LEVEL: f32 = 1.00;
 const _MAX_BITS: u32 = 486_604_799; // Genesis Block Bits = 0x1d00ffff
 
 const MAX_NONCE: u32 = 4_294_967_295; // 32 bits 2^32 -1 
-
 
 /// This function gets the "target" representation of some "bits".
 /// It returns a String with the hexadecimal representation (32 Bytes - 64 chars) of the target.
@@ -38,16 +38,12 @@ pub fn get_target_representation(bits: u32) -> String {
   let exponent = &hex_representation[..2]; // 1d
   let coefficient = &hex_representation[2..]; // 00ffff
 
-  println!("hex: {}", hex_representation);
-
   let decimal_exponent = u16::from_str_radix(exponent, 16).unwrap();
   let decimal_coefficient = u128::from_str_radix(coefficient, 16).unwrap();
   let target_two_pow: u16 = 8 * (decimal_exponent - 3);
   let pow_formula = pow(BigUint::from(2u8), target_two_pow as usize); // 2 ^(8*(exponent-3)
   let target = BigUint::from(decimal_coefficient * pow_formula); // target = coefficient * 2 ^(8*(exponent-3))  
   
-  println!("dec: {}", target);
-
   let target = format!("{:x}", target);  
 
   let hexa_length = target.len();
@@ -61,8 +57,6 @@ pub fn get_target_representation(bits: u32) -> String {
   zeros.push_str(&target);
 
   let target = zeros;
-
-  println!("final hex: {}", target);
 
   target
 }
@@ -150,20 +144,15 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 }
 
 /// This is a basic proof of work algorithm.
-pub fn mint_block(block_header: &mut BlockHeader) -> () {  
+pub fn mine_block(block_header: &mut BlockHeader) -> () {  
   let target = get_target_representation(block_header.bits);
   let decimal_target = BigInt::parse_bytes(&target.as_bytes(), 16).unwrap();  
   
-  // println!("hash target: {}", target);
-
   for nonce in 0..MAX_NONCE {
     block_header.nonce = nonce;
     let stringfied = serde_json::to_string(&block_header).unwrap();
     let hash = digest(&stringfied);
     let decimal_hash = BigInt::parse_bytes(&hash.as_bytes(), 16).unwrap();
-
-    println!("dec target: {}", decimal_target);
-    println!("hash:   {}", decimal_hash);
 
     if decimal_hash <= decimal_target {
       return

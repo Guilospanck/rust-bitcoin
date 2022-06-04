@@ -1,14 +1,7 @@
 use serde::{Deserialize, Serialize};
+use crate::transaction::{Transaction};
 
-pub type Account = String;
 pub type Timestamp = u32;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Transaction {
-  pub from: Account,
-  pub to: Account,
-  pub amount: f32,
-}
 
 /// BlockHeader is the head of the block.
 /// The hash of the block is, actually, the hash of the block header.

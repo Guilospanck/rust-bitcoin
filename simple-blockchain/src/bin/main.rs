@@ -1,16 +1,21 @@
 use btc::helpers;
 use btc::{BlockHeader, Transaction};
 use chrono::prelude::*;
+use std::time::{Instant};
+use sha256::digest;
+use btc::wallet;
 
 fn test_pow() {
-  let first_transaction = Transaction {
-    from: "COINBASE".to_owned(),
-    to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
-    amount: 50.0,
-  };
+  // let first_transaction = Transaction {
+  //   from: "COINBASE".to_owned(),
+  //   to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
+  //   amount: 50.0,
+  // };
 
-  let mut transactions = vec![first_transaction];
-  let merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
+  // let mut transactions = vec![first_transaction];
+  // let merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
+
+  let merkle_root = "bc15f9dcbe637c187bb94247057b14637316613630126fc396c22e08b89006ea".to_owned();
 
   let previous_block_hash = vec!["0"; 64].join("");
 
@@ -23,17 +28,18 @@ fn test_pow() {
     previous_block_hash,
     merkle_root,
     timestamp,
-    // bits: 486_575_299,
-    // bits: 4_294_967_295,
-    // bits: 1_073_741_824,
-    bits: 536_870_912,
+    bits: 486_604_799,
     nonce: 0,
   };
 
   println!("{:?}\n", block_header);
 
-  helpers::mint_block(&mut block_header);
+  helpers::mine_block(&mut block_header);
 
+  let stringfied = serde_json::to_string(&block_header).unwrap();
+  let hash = digest(&stringfied);
+
+  println!("Block hash: {}", hash);
   println!("Nonce: {:?}", block_header.nonce);
 }
 
@@ -41,7 +47,7 @@ fn test_target_representation() {
   let genesis_bits = 486_604_799;
   helpers::get_target_representation(genesis_bits);
   let bits_block_730000 = 386_521_239;
-  helpers::get_target_representation(bits_block_730000);  
+  helpers::get_target_representation(bits_block_730000);
   let bits_block_277_316 = 41_668_748;
   helpers::get_target_representation(bits_block_277_316);
 }
@@ -59,5 +65,11 @@ fn test_merkle_root() {
 }
 
 fn main() {
-  println!("");
+  // println!("Mining block...");
+  // let start = Instant::now();
+  // test_pow();
+  // let duration = start.elapsed();
+  // println!("Time elapsed to mine block is: {:?}", duration);  
+  let private_key = wallet::generate_private_key();
+  wallet::get_public_key_from_private_key(private_key);
 }

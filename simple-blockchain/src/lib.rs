@@ -1,6 +1,9 @@
-pub use block::{Block, BlockHeader, Transaction, Timestamp};
+pub use block::{Block, BlockHeader, Timestamp};
+pub use transaction::{Transaction};
 pub use blockchain::{Blockchain};
 
-mod block;
 pub mod helpers;
+pub mod wallet;
+mod block;
 mod blockchain;
+mod transaction;

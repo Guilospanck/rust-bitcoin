@@ -11,3 +11,6 @@ serde_json = "1.0.81"
 sha256 = "1.0.3"
 num = "0.4.0"
 chrono = "0.4"
+rand = { version = "0.8.5",  features = ["std"] }
+secp256k1 = "0.22.1"
+hex = "0.4.3"

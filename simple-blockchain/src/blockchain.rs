@@ -1,4 +1,5 @@
-use crate::block::{Block, Transaction, BlockHeader};
+use crate::block::{Block, BlockHeader};
+use crate::transaction::{Transaction};
 use crate::helpers;
 use chrono::prelude::*;
 
@@ -32,7 +33,7 @@ pub struct Blockchain {
 //       nonce: 0
 //     };    
 
-//     helpers::mint_block(&mut block_header);
+//     helpers::mine_block(&mut block_header);
 
 //     let genesis = Block {
 //       previous_block_hash,
