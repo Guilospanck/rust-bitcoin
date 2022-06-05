@@ -1,35 +1,58 @@
 use btc::helpers;
+use btc::wallet;
 use btc::{BlockHeader, Transaction};
 use chrono::prelude::*;
-use std::time::{Instant};
 use sha256::digest;
-use btc::wallet;
+use std::time::Instant;
 
-fn test_pow() {
-  // let first_transaction = Transaction {
-  //   from: "COINBASE".to_owned(),
-  //   to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
-  //   amount: 50.0,
-  // };
-
-  // let mut transactions = vec![first_transaction];
-  // let merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
-
+fn _genesis_block() {
   let merkle_root = "bc15f9dcbe637c187bb94247057b14637316613630126fc396c22e08b89006ea".to_owned();
-
   let previous_block_hash = vec!["0"; 64].join("");
 
+  let _block_header = BlockHeader {
+    version: "1".to_owned(),
+    previous_block_hash,
+    merkle_root,
+    timestamp: 1654455888,
+    bits: 486_604_799,
+    nonce: 750_730_123,
+  };
+}
+
+fn _chrono_date() {
   let dt: NaiveDateTime = NaiveDate::from_ymd(2022, 6, 3).and_hms(14, 13, 00);
-  let utc = DateTime::<Utc>::from_utc(dt, Utc);
-  let timestamp = utc.timestamp() as u32;
+
+  let _utc = DateTime::<Utc>::from_utc(dt, Utc);
+  let utc = Utc::now();
+
+  let _timestamp = utc.timestamp() as u32;
+}
+
+fn _merkle_root_transactions() {
+  let first_transaction = Transaction {
+    from: "COINBASE".to_owned(),
+    to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
+    amount: 50.0,
+  };
+
+  let mut transactions = vec![first_transaction];
+  let _merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
+}
+
+fn test_pow() {
+  println!("Mining block...");
+  let start = Instant::now();
+
+  let merkle_root = "bc15f9dcbe637c187bb94247057b14637316613630126fc396c22e08b89006ea".to_owned();
+  let previous_block_hash = vec!["0"; 64].join("");
 
   let mut block_header = BlockHeader {
     version: "1".to_owned(),
     previous_block_hash,
     merkle_root,
-    timestamp,
+    timestamp: 1654455888,
     bits: 486_604_799,
-    nonce: 0,
+    nonce: 750_730_123,
   };
 
   println!("{:?}\n", block_header);
@@ -39,13 +62,18 @@ fn test_pow() {
   let stringfied = serde_json::to_string(&block_header).unwrap();
   let hash = digest(&stringfied);
 
+  let duration = start.elapsed();
+  println!("Time elapsed to mine block is: {:?}", duration);
+
   println!("Block hash: {}", hash);
-  println!("Nonce: {:?}", block_header.nonce);
+  println!("Block mined: {:?}", block_header);
 }
 
 fn test_target_representation() {
   let genesis_bits = 486_604_799;
   helpers::get_target_representation(genesis_bits);
+  let bits_block_739421 = 386_492_960;
+  helpers::get_target_representation(bits_block_739421);
   let bits_block_730000 = 386_521_239;
   helpers::get_target_representation(bits_block_730000);
   let bits_block_277_316 = 41_668_748;
@@ -65,11 +93,6 @@ fn test_merkle_root() {
 }
 
 fn main() {
-  // println!("Mining block...");
-  // let start = Instant::now();
-  // test_pow();
-  // let duration = start.elapsed();
-  // println!("Time elapsed to mine block is: {:?}", duration);  
   let private_key = wallet::generate_private_key();
-  wallet::get_public_key_from_private_key(private_key);
+  let _public_key = wallet::get_public_key_from_private_key(private_key);
 }

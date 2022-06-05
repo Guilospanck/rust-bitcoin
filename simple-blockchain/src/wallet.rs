@@ -1,8 +1,7 @@
-use num::bigint::{BigInt, Sign};
+use hex;
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
-use hex::decode;
 
 /// From a private key (k) - usually picked up at random - we derive,
 /// using elliptic curve multiplication (ECC), a public key (K).
@@ -24,14 +23,20 @@ pub fn generate_private_key() -> String {
   let hexadecimal_private_key = digest(random.to_string());
   println!("Private hex: {}", hexadecimal_private_key);
 
-  hexadecimal_private_key  
+  hexadecimal_private_key
 }
 
-pub fn get_public_key_from_private_key(private_key: String) {
+pub fn get_public_key_from_private_key(private_key: String) -> String {
   let private_key_bytes = hex::decode(private_key).unwrap();
   let secp = Secp256k1::new();
-  let secret_key =
-    SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
+  let secret_key = SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
   let public_key = PublicKey::from_secret_key(&secp, &secret_key);
   println!("Public: {}", public_key);
+  println!("Public Key length: {}", public_key.to_string().len());
+
+  public_key.to_string()
+}
+
+pub fn generate_address_from_public_key() {
+
 }
