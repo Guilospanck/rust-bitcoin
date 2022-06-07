@@ -42,12 +42,15 @@ pub fn get_public_key_from_private_key(private_key: String) -> String {
 }
 
 pub fn generate_bech32m_address_from_public_key(public_key: String) -> String {
-  let hashed_256_public_key = digest(&public_key);
-  let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
+  // let hashed_256_public_key = digest(&public_key);
+  // let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
+  let ripemd160_hashed = "ec4cf4f972275b836cddb880d7991e552d7e9828".to_owned();
 
   println!("Ripemd160: {}", ripemd160_hashed);
 
-  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), ripemd160_hashed.into_bytes());
+  let hash160_as_base32 = convert_to_base32(ripemd160_hashed);
+
+  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), hash160_as_base32);
   let encoded = bech32.encode();
 
   println!("Bech32m encoded: {}", encoded);
@@ -62,6 +65,36 @@ fn ripemd160_hasher(data: String) -> String {
   let result = hasher.finalize();
 
   format!("{:x}", result)
+}
+
+fn convert_to_base32(data_hex: String) -> Vec<u8> {
+  let hex_as_bytes = hex::decode(&data_hex).unwrap();
+
+  let mut bits = String::new();
+  for byte in hex_as_bytes {
+    bits.push_str(&format!("{:b}", byte));
+  }
+
+  let divisible_by_five = (bits.len() % 5) == 0;
+
+  if !divisible_by_five {
+    let bits_to_pad = 5 - (bits.len() % 5);  
+    for _i in 0..bits_to_pad {
+      bits.push('0');
+    }
+  }
+
+  let mut grouped_by_five: Vec<u8> = Vec::new();
+
+  for i in (0..bits.len()).step_by(5) {    
+    let bits_as_decimal = u8::from_str_radix(&bits[i..i+5], 2).unwrap(); 
+    grouped_by_five.push(bits_as_decimal);    
+  }
+
+  println!("Base32: {:?}", grouped_by_five);
+
+  grouped_by_five
+  
 }
 
 
