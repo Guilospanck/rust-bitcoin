@@ -1,8 +1,8 @@
 use hex;
 use rand::prelude::*;
+use ripemd::{Digest, Ripemd160};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
-use ripemd::{Ripemd160, Digest};
 use std::str;
 
 /// From a private key (k) - usually picked up at random - we derive,
@@ -15,19 +15,19 @@ use std::str;
 /// `(n = 1.158*10^77, which is slightly less than 2^256)`
 /// ```rust
 /// let maximum_private_key_value: BigInt = BigInt::from(1158u16) * BigInt::from(10u8).pow(74);
-/// 
+///
 /// // Address
 /// let A = RIPEMD160(SHA256(K));
 /// ```
-/// 
+///
 ///
 
 pub fn generate_private_key() -> String {
   let mut random: StdRng = SeedableRng::from_entropy();
   let random: u128 = random.gen::<u128>();
-  println!("Private dec: {}", random);
+  println!("Private Key (k) in decimal format: {}", random);
   let hexadecimal_private_key = digest(random.to_string());
-  println!("Private hex: {}", hexadecimal_private_key);
+  println!("Private Key (k) in SHA256 format: {}", hexadecimal_private_key);
 
   hexadecimal_private_key
 }
@@ -38,24 +38,27 @@ pub fn get_public_key_from_private_key(private_key: String) -> String {
   let secret_key = SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
   let public_key = PublicKey::from_secret_key(&secp, &secret_key);
 
+  println!("Public key (K): {}", public_key);
+
   public_key.to_string()
 }
 
 pub fn generate_bech32m_address_from_public_key(public_key: String) -> String {
-  // let hashed_256_public_key = digest(&public_key);
-  // let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
-  let ripemd160_hashed = "ec4cf4f972275b836cddb880d7991e552d7e9828".to_owned();
-
-  println!("Ripemd160: {}", ripemd160_hashed);
-
+  let hashed_256_public_key = digest(&public_key);
+  println!("SHA256 of Public Key (K): {}", hashed_256_public_key);
+  let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
+  println!("Ripemd160(SHA256(K)), also known as HASH160: {}", ripemd160_hashed);
   let hash160_as_base32 = convert_to_base32(ripemd160_hashed);
+  println!("HASH160 in Base32: {:?}", hash160_as_base32);
 
-  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), hash160_as_base32);
-  let encoded = bech32.encode(EncodingType::BECH32M);
+  // witness version
+  let mut witness_version_plus_hash160 = vec![1u8];
+  witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
+
+  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
+  let encoded = bech32.encode(EncodingType::BECH32M); // <- error
 
   println!("Bech32m encoded: {}", encoded);
-  
-  
   "".to_owned()
 }
 
@@ -68,11 +71,11 @@ fn ripemd160_hasher(data: String) -> String {
 }
 
 fn convert_to_base32(data_hex: String) -> Vec<u8> {
-  let hex_as_bytes = hex::decode(&data_hex).unwrap();
+  let hex_as_bytes = hex::decode(&data_hex).unwrap();  
 
   let mut bits = String::new();
   for byte in hex_as_bytes {
-    bits.push_str(&format!("{:b}", byte));
+    bits.push_str(&format!("{:08b}", byte));
   }
 
   let divisible_by_five = (bits.len() % 5) == 0;
@@ -91,29 +94,25 @@ fn convert_to_base32(data_hex: String) -> Vec<u8> {
     grouped_by_five.push(bits_as_decimal);    
   }
 
-  println!("Base32: {:?}", grouped_by_five);
-
-  grouped_by_five
-  
+  grouped_by_five  
 }
 
-
 /// Bech32 (Bech32m)
-/// 
+///
 /// See: https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki and
 ///      https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki#Specification
-/// 
+///
 /// Bech32:
 /// - human-readable part (HRP): This part MUST contain 1 to 83 US-ASCII characters.
 /// - the separator: 1
 /// - the data part: at least 6 characters and only alphanumeric characters
 ///   excluding "1", "b", "i" and "o".
 ///   The last 6 characters are the checksum and have no information.
-/// 
+///
 #[derive(Clone)]
 pub struct Bech32 {
   hrp: String,
-  data: Vec<u8>
+  data: Vec<u8>,
 }
 
 const MAIN_NET_BTC: &str = "bc";
@@ -123,31 +122,23 @@ const SEPARATOR: char = '1';
 
 // Encoding character set. Maps data value -> char
 const CHARSET: [char; 32] = [
-  'q',	'p',	'z',	'r',	'y',	'9',	'x',	'8',
-  'g',	'f',	'2',	't',	'v',	'd',	'w',	'0',
-	's',	'3',	'j',	'n',	'5',	'4',	'k',	'h',
-	'c',	'e',	'6',	'm',	'u',	'a',	'7',	'l',
+  'q', 'p', 'z', 'r', 'y', '9', 'x', '8', 'g', 'f', '2', 't', 'v', 'd', 'w', '0', 's', '3', 'j',
+  'n', '5', '4', 'k', 'h', 'c', 'e', '6', 'm', 'u', 'a', '7', 'l',
 ];
 
 // Reverse character set. Maps ASCII byte -> CHARSET index on [0,31]
-const CHARSET_REV: [i8; 128] = [
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  15, -1, 10, 17, 21, 20, 26, 30,  7,  5, -1, -1, -1, -1, -1, -1,
-  -1, 29, -1, 24, 13, 25,  9,  8, 23, -1, 18, 22, 31, 27, 19, -1,
-   1,  0,  3, 16, 11, 28, 12, 14,  6,  4,  2, -1, -1, -1, -1, -1,
-  -1, 29, -1, 24, 13, 25,  9,  8, 23, -1, 18, 22, 31, 27, 19, -1,
-   1,  0,  3, 16, 11, 28, 12, 14,  6,  4,  2, -1, -1, -1, -1, -1
+const _CHARSET_REV: [i8; 128] = [
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  15, -1, 10, 17, 21, 20, 26, 30, 7, 5, -1, -1, -1, -1, -1, -1, -1, 29, -1, 24, 13, 25, 9, 8, 23,
+  -1, 18, 22, 31, 27, 19, -1, 1, 0, 3, 16, 11, 28, 12, 14, 6, 4, 2, -1, -1, -1, -1, -1, -1, 29, -1,
+  24, 13, 25, 9, 8, 23, -1, 18, 22, 31, 27, 19, -1, 1, 0, 3, 16, 11, 28, 12, 14, 6, 4, 2, -1, -1,
+  -1, -1, -1,
 ];
-
 
 impl Bech32 {
   fn new(hrp: String, data: Vec<u8>) -> Self {
-    Bech32 {
-      hrp,
-      data,
-    }
+    Bech32 { hrp, data }
   }
 
   fn encode(&self, encoding_type: EncodingType) -> String {
@@ -170,29 +161,30 @@ impl Bech32 {
         return "Invalid data".to_owned();
       }
 
-      encoded.push(CHARSET[i  as usize]);
+      encoded.push(CHARSET[i as usize]);
     }
-
 
     encoded
   }
 }
 
 /* Checksum functions */
-
 enum EncodingType {
   BECH32,
   BECH32M,
 }
 
-const BECH32M_CONST: u32 =  734_539_939; // 0x2bc830a3
+const BECH32M_CONST: u32 = 734_539_939; // 0x2bc830a3
 const BECH32_CONST: u32 = 1;
 
 fn get_encoding_const(encoding: EncodingType) -> u32 {
   match encoding {
     EncodingType::BECH32 => BECH32_CONST,
     EncodingType::BECH32M => BECH32M_CONST,
-    _ => println!("Error: encoding is not valid.")
+    _ => {
+      println!("Error: encoding is not valid.");
+      return 0;
+    }
   }
 }
 
@@ -221,11 +213,11 @@ fn verify_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -
 fn hrp_expand(hrp: &Vec<u8>) -> Vec<u8> {
   let mut v: Vec<u8> = Vec::new();
   for b in hrp {
-      v.push(*b >> 5);
+    v.push(*b >> 5);
   }
   v.push(0);
   for b in hrp {
-      v.push(*b & 0x1f);
+    v.push(*b & 0x1f);
   }
   v
 }
@@ -241,10 +233,9 @@ fn polymod(values: Vec<u8>) -> u32 {
     chk = (chk & 0x1ffffff) << 5 ^ (v as u32);
     for i in 0..5 {
       if (b >> i) & 1 == 1 {
-          chk ^= GEN[i]
+        chk ^= GEN[i]
       }
     }
   }
   chk
 }
-
