@@ -51,7 +51,7 @@ pub fn generate_bech32m_address_from_public_key(public_key: String) -> String {
   let hash160_as_base32 = convert_to_base32(ripemd160_hashed);
 
   let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), hash160_as_base32);
-  let encoded = bech32.encode();
+  let encoded = bech32.encode(EncodingType::BECH32M);
 
   println!("Bech32m encoded: {}", encoded);
   
@@ -150,17 +150,17 @@ impl Bech32 {
     }
   }
 
-  fn encode(&self) -> String {
+  fn encode(&self, encoding_type: EncodingType) -> String {
     if self.hrp.len() < 1 || self.hrp.len() > 83 {
       // invalid length error
       return "Error: invalid length".to_owned();
     }
 
-    let mut encoding = self.hrp.clone();
-    encoding.push(SEPARATOR);
+    let mut encoded = self.hrp.clone();
+    encoded.push(SEPARATOR);
 
     let hrp_bytes: Vec<u8> = self.hrp.clone().into_bytes();
-    let checksum = create_checksum(&hrp_bytes, &self.data);
+    let checksum = create_checksum(&hrp_bytes, &self.data, encoding_type);
 
     let mut combined = self.data.clone();
     combined.extend_from_slice(&checksum);
@@ -170,23 +170,41 @@ impl Bech32 {
         return "Invalid data".to_owned();
       }
 
-      encoding.push(CHARSET[i  as usize]);
+      encoded.push(CHARSET[i  as usize]);
     }
 
 
-    encoding
+    encoded
   }
 }
 
 /* Checksum functions */
-const BECH32M_CONST: u32 =  734_539_939; // 0x2bc830a3
 
-fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>) -> Vec<u8> {
+enum EncodingType {
+  BECH32,
+  BECH32M,
+}
+
+const BECH32M_CONST: u32 =  734_539_939; // 0x2bc830a3
+const BECH32_CONST: u32 = 1;
+
+fn get_encoding_const(encoding: EncodingType) -> u32 {
+  match encoding {
+    EncodingType::BECH32 => BECH32_CONST,
+    EncodingType::BECH32M => BECH32M_CONST,
+    _ => println!("Error: encoding is not valid.")
+  }
+}
+
+fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -> Vec<u8> {
   let mut values: Vec<u8> = hrp_expand(hrp);
   values.extend_from_slice(data);
+
   // Pad with 6 zeros
   values.extend_from_slice(&[0u8; 6]);
-  let plm: u32 = polymod(values) ^ BECH32M_CONST;
+
+  let plm: u32 = polymod(values) ^ get_encoding_const(encoding_type);
+
   let mut checksum: Vec<u8> = Vec::new();
   for p in 0..6 {
     checksum.push(((plm >> 5 * (5 - p)) & 0x1f) as u8);
@@ -194,10 +212,10 @@ fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>) -> Vec<u8> {
   checksum
 }
 
-fn verify_checksum(hrp: &Vec<u8>, data: &Vec<u8>) -> bool {
+fn verify_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -> bool {
   let mut exp = hrp_expand(hrp);
   exp.extend_from_slice(data);
-  polymod(exp) == BECH32M_CONST
+  polymod(exp) == get_encoding_const(encoding_type)
 }
 
 fn hrp_expand(hrp: &Vec<u8>) -> Vec<u8> {
