@@ -93,7 +93,8 @@ fn test_merkle_root() {
 }
 
 fn main() {
-  let private_key = wallet::generate_private_key();
-  let public_key = wallet::get_public_key_from_private_key(private_key);
-  wallet::generate_bech32m_address_from_public_key(public_key);
+  let my_wallet = wallet::Wallet{};
+  let private_key = my_wallet.generate_private_key();
+  let public_key = my_wallet.get_public_key_from_private_key(private_key);
+  my_wallet.generate_bech32m_address_from_public_key(public_key);
 }

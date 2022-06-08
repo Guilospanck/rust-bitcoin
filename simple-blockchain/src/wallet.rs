@@ -1,3 +1,4 @@
+use num_bigint::{BigInt, Sign};
 use hex;
 use rand::prelude::*;
 use ripemd::{Digest, Ripemd160};
@@ -5,61 +6,115 @@ use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
 use std::str;
 
+/// A wallet contains our addresses and keys.
+/// 
 /// From a private key (k) - usually picked up at random - we derive,
 /// using elliptic curve multiplication (ECC), a public key (K).
 /// From a public key we derive, using a one-way hashing function,
 /// a bitcoin address (A).
 ///
-/// The private key is picked at random, between 1 and 2^256. To be more accurate,
-/// the private key can be any number between 1 and n-1, where n is a constant
-/// `(n = 1.158*10^77, which is slightly less than 2^256)`
-/// ```rust
-/// let maximum_private_key_value: BigInt = BigInt::from(1158u16) * BigInt::from(10u8).pow(74);
-///
-/// // Address
-/// let A = RIPEMD160(SHA256(K));
-/// ```
-///
-///
+#[derive(Debug)]
+pub struct Wallet {}
 
-pub fn generate_private_key() -> String {
-  let mut random: StdRng = SeedableRng::from_entropy();
-  let random: u128 = random.gen::<u128>();
-  println!("Private Key (k) in decimal format: {}", random);
-  let hexadecimal_private_key = digest(random.to_string());
-  println!("Private Key (k) in SHA256 format: {}", hexadecimal_private_key);
+impl Wallet {
+  /// Generates a private key from a CSPRNG (cryptographically-secure pseudo-random number
+  /// generator) entropy and returns the SHA256 format of it.
+  /// 
+  /// This number must be less than a constant `(n = 1.158*10^77, which is slightly less than 2^256)`,
+  /// in order to be able to derive it from a ECC curve.
+  /// 
+  /// Example:
+  /// ```rust
+  /// let wallet = Wallet{};
+  /// let k = wallet.generate_private_key();
+  /// ```
+  pub fn generate_private_key(&self) -> String {
+    let maximum_private_key_value: BigInt = BigInt::from(1158u16) * BigInt::from(10u8).pow(74) - 1u8;    
 
-  hexadecimal_private_key
-}
+    let mut random: StdRng = SeedableRng::from_entropy();
+    let random: u128 = random.gen::<u128>();
+    let hexadecimal_private_key = digest(random.to_string());
 
-pub fn get_public_key_from_private_key(private_key: String) -> String {
-  let private_key_bytes = hex::decode(private_key).unwrap();
-  let secp = Secp256k1::new();
-  let secret_key = SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
-  let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+    let hexa_as_bytes = hex::decode(&hexadecimal_private_key).unwrap();    
+    let hexa_as_bigint = BigInt::from_bytes_be(Sign::Plus, &hexa_as_bytes);
 
-  println!("Public key (K): {}", public_key);
+    if hexa_as_bigint > maximum_private_key_value {
+      return self.generate_private_key();
+    }
 
-  public_key.to_string()
-}
+    println!("Private Key (k) in decimal format: {}", random);
+    println!("Private Key (k) in SHA256 format: {}", hexadecimal_private_key);
 
-pub fn generate_bech32m_address_from_public_key(public_key: String) -> String {
-  let hashed_256_public_key = digest(&public_key);
-  println!("SHA256 of Public Key (K): {}", hashed_256_public_key);
-  let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
-  println!("Ripemd160(SHA256(K)), also known as HASH160: {}", ripemd160_hashed);
-  let hash160_as_base32 = convert_to_base32(ripemd160_hashed);
-  println!("HASH160 in Base32: {:?}", hash160_as_base32);
+    hexadecimal_private_key
+  }
 
-  // witness version
-  let mut witness_version_plus_hash160 = vec![1u8];
-  witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
+  /// Derives a Public Key (K) from a Private Key (k) using ECC
+  /// (Elliptic Curve Cryptography) using the generator parameter
+  /// known as `secp256k1`.
+  /// The `private_key` argument is the SHA256 representation of it.
+  /// Returns a hexadecimal string representing the Public Key.
+  /// 
+  /// Example:
+  /// ```rust
+  /// let wallet = Wallet{};
+  /// let k = wallet.generate_private_key();
+  /// let K = wallet.get_public_key_from_private_key(k);
+  /// 
+  /// // tests
+  /// let k = "e1b4519c66558ec215c55392290afc35f249e113c803bfcadf3b066b4f87d2f3".to_owned();
+  /// let K = wallet.get_public_key_from_private_key(k);
+  /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
+  /// ```
+  pub fn get_public_key_from_private_key(&self, private_key: String) -> String {
+    let private_key_bytes = hex::decode(private_key).unwrap();
+    let secp = Secp256k1::new();
+    let secret_key =
+      SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
+    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
 
-  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
-  let encoded = bech32.encode(EncodingType::BECH32M); // <- error
+    println!("Public key (K): {}", public_key);
 
-  println!("Bech32m encoded: {}", encoded);
-  "".to_owned()
+    public_key.to_string()
+  }
+
+  /// Generates a Bech32m address from a Public Key (K).
+  /// The Public Key must not be hashed before, only in its Hex format.
+  /// This function will apply the RIPEMD160(SHA256(K)) to K; get its 
+  /// Base32 format and then retrieve its representation in Bech32m style 
+  /// for the Bitcoin mainnet (bc).
+  /// 
+  /// Example:
+  /// ```rust
+  /// let wallet = Wallet{};
+  /// let k = wallet.generate_private_key();
+  /// let K = wallet.get_public_key_from_private_key(k);
+  /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K);
+  /// 
+  /// // tests
+  /// let k = "e1b4519c66558ec215c55392290afc35f249e113c803bfcadf3b066b4f87d2f3".to_owned();
+  /// let K = wallet.get_public_key_from_private_key(k);
+  /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
+  /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K);
+  /// assert_eq!(bech32m_address, "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
+  /// ```
+  pub fn generate_bech32m_address_from_public_key(&self, public_key: String) -> String {
+    let hashed_256_public_key = digest(&public_key);
+    println!("SHA256 of Public Key (K): {}", hashed_256_public_key);
+    let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
+    println!("Ripemd160(SHA256(K)), also known as HASH160: {}", ripemd160_hashed);
+    let hash160_as_base32 = convert_to_base32(ripemd160_hashed);
+    println!("HASH160 in Base32: {:?}", hash160_as_base32);
+
+    // witness version
+    let mut witness_version_plus_hash160 = vec![1u8];
+    witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
+
+    let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
+    let encoded = bech32.encode(EncodingType::BECH32M);
+
+    println!("Bech32m encoded: {}", encoded);
+    encoded
+  }
 }
 
 fn ripemd160_hasher(data: String) -> String {
@@ -71,7 +126,7 @@ fn ripemd160_hasher(data: String) -> String {
 }
 
 fn convert_to_base32(data_hex: String) -> Vec<u8> {
-  let hex_as_bytes = hex::decode(&data_hex).unwrap();  
+  let hex_as_bytes = hex::decode(&data_hex).unwrap();
 
   let mut bits = String::new();
   for byte in hex_as_bytes {
@@ -81,7 +136,7 @@ fn convert_to_base32(data_hex: String) -> Vec<u8> {
   let divisible_by_five = (bits.len() % 5) == 0;
 
   if !divisible_by_five {
-    let bits_to_pad = 5 - (bits.len() % 5);  
+    let bits_to_pad = 5 - (bits.len() % 5);
     for _i in 0..bits_to_pad {
       bits.push('0');
     }
@@ -89,12 +144,12 @@ fn convert_to_base32(data_hex: String) -> Vec<u8> {
 
   let mut grouped_by_five: Vec<u8> = Vec::new();
 
-  for i in (0..bits.len()).step_by(5) {    
-    let bits_as_decimal = u8::from_str_radix(&bits[i..i+5], 2).unwrap(); 
-    grouped_by_five.push(bits_as_decimal);    
+  for i in (0..bits.len()).step_by(5) {
+    let bits_as_decimal = u8::from_str_radix(&bits[i..i + 5], 2).unwrap();
+    grouped_by_five.push(bits_as_decimal);
   }
 
-  grouped_by_five  
+  grouped_by_five
 }
 
 /// Bech32 (Bech32m)
@@ -102,12 +157,23 @@ fn convert_to_base32(data_hex: String) -> Vec<u8> {
 /// See: https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki and
 ///      https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki#Specification
 ///
-/// Bech32:
-/// - human-readable part (HRP): This part MUST contain 1 to 83 US-ASCII characters.
-/// - the separator: 1
-/// - the data part: at least 6 characters and only alphanumeric characters
-///   excluding "1", "b", "i" and "o".
-///   The last 6 characters are the checksum and have no information.
+/// Anatomy of a Bech32 address:
+///
+///   `{HRP}{Separator}{payload}`
+///
+/// - `human-readable part (HRP)`: This part MUST contain 1 to 83 US-ASCII characters. Usually is just `"bc"`
+/// for the mainnet or `"tb"` for the testnet.
+/// - `separator`: `'1'` (one)
+/// - `payload`: at least 6 characters and only alphanumeric characters excluding `"1"`,`"b"`,`"i"` and `"o"`.
+///
+///   Anatomy of the payload:
+///
+///    `{witness-version}{program}{checksum}`
+///
+///   - `witness-version`: goes from 0 to 15 in the Base32 format. 0 is for Bech32 addresses and 1 forward is for Bech32m addresses.
+///   - `program`: basically it's the HASH160 of your public key (K) in the Base32 format.
+///   - `checksum`: uses the HRP (as bytes) and your [witness-version, program] (witness version prepended to the program base32 bytes).
+///
 ///
 #[derive(Clone)]
 pub struct Bech32 {
