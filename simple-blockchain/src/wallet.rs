@@ -228,6 +228,13 @@ const CHARSET_REV: [i8; 128] = [
   -1, -1, -1,
 ];
 
+const MIN_HRP_LENGTH: usize = 1;
+const SEPARATOR_LENGTH: usize = 1;
+const CHECKSUM_LENGTH: usize = 6;
+// Address constants
+const MIN_ADDRESS_LENGTH: usize = MIN_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH;
+const MAX_ADDRESS_LENGTH: usize = 90;
+
 impl Bech32 {
   pub fn empty() -> Self {
     Bech32 {
@@ -267,35 +274,61 @@ impl Bech32 {
   }
 
   pub fn decode(&self, address: String) -> Bech32Decoded {
+    if address.len() < MIN_ADDRESS_LENGTH || address.len() > MAX_ADDRESS_LENGTH {
+      panic!("Error: Invalid length.");
+    }
+
     let separated_data: Vec<&str> = address.split(SEPARATOR).collect();
     let hrp: &str = separated_data[0];
 
     let payload: &str = separated_data[1];
     let payload_length = payload.len();
 
-    let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
-
-    // Get 5 bits representation of them
-    let program = &payload[1..payload_length - 6];
-    let mut program_bytes = Vec::<u8>::new();
-    for character in program.chars() {
-      program_bytes.push(get_base32_byte_representation(character) as u8);
+    if hrp.len() < MIN_HRP_LENGTH || payload_length < CHECKSUM_LENGTH {
+      panic!("Error: Invalid length.");
     }
-    let program_as_8_bits = convert_bits(5, 8, program_bytes);    
+
+    if hrp != MAIN_NET_BTC {
+      panic!("Error: Invalid HRP. It must be 'bc'.")
+    }
+
+    let hrp_bytes = hrp.to_owned().into_bytes();
+
+    // Get witness version as base32 byte (0, 1, 2...16)
+    let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
+    let witness_version_length = witness_version.to_string().len();
+    
+    // Get 5 bits representation of payload ({witness_version}{program}{checksum})
+    let mut payload_bytes = Vec::<u8>::new();
+    for character in payload.chars() {
+      payload_bytes.push(get_base32_byte_representation(character) as u8);
+    }
+
+    // Validates checksum
+    let mut encoding_type: EncodingType = EncodingType::BECH32;
+    if witness_version != 0 {
+      encoding_type = EncodingType::BECH32M;
+    }
+
+    if !verify_checksum(&hrp_bytes, &payload_bytes, encoding_type) {
+      panic!("Checksum is not valid.");
+    }
 
     // Validates decoding
-    let (err, err_msg) = validate_decode(hrp, witness_version, program_as_8_bits.clone());
+    let program = payload_bytes[witness_version_length..payload_length - CHECKSUM_LENGTH].to_vec();
+    let program_as_8_bits = convert_bits(5, 8, program);
+    let (err, err_msg) = validate_decode(witness_version, program_as_8_bits.clone());
     if err {
       panic!("{}", err_msg);
     }
 
-    let program = hex::encode(&program_as_8_bits);
+    let program_hex = hex::encode(&program_as_8_bits);
 
-    let checksum = &payload[payload_length - 6..];
+    let checksum = &payload[payload_length - CHECKSUM_LENGTH..];
 
     let payload_struct = Payload {
       witness_version: format!("{:x}", witness_version),
-      program,
+      program: program_hex,
       checksum: checksum.to_owned(),
     };
 
@@ -306,18 +339,20 @@ impl Bech32 {
   }
 }
 
-fn validate_decode(hrp: &str, witness_version: i8, program_as_8_bits: Vec<u8>) -> (bool, String) {
-  if hrp != MAIN_NET_BTC {
-    return (true, String::from("Unknown HRP"));
-  }
-
+fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> (bool, String) {
   if witness_version < 0 || witness_version > 16 {
-    return (true, String::from("Wrong witness version. Must be between 0 and 16."));
+    return (
+      true,
+      String::from("Wrong witness version. Must be between 0 and 16."),
+    );
   }
 
   // validate 2 - 40 groups
-  if program_as_8_bits.len() < 2 || program_as_8_bits.len() > 40 {    
-    return (true, String::from("Error: There must be 2 - 40 groups. Data error."));
+  if program_as_8_bits.len() < 2 || program_as_8_bits.len() > 40 {
+    return (
+      true,
+      String::from("Error: There must be 2 - 40 groups. Data error."),
+    );
   }
 
   // validate version and bytes of the program
@@ -325,22 +360,22 @@ fn validate_decode(hrp: &str, witness_version: i8, program_as_8_bits: Vec<u8>) -
     return (true, String::from("Error: Invalid version length."));
   }
 
-  // Verify checksum
-  let mut encoding_type: EncodingType = EncodingType::BECH32;
-  if witness_version != 0 {
-    encoding_type = EncodingType::BECH32M;
-  }
-
-  let mut witness_version_plus_hash160_in_base32 = vec![witness_version as u8];  
-  witness_version_plus_hash160_in_base32.extend_from_slice(&convert_bits(8, 5, program_as_8_bits));    
-
-  if !verify_checksum(&hrp.to_owned().clone().into_bytes(), &witness_version_plus_hash160_in_base32, encoding_type){
-    return (true, String::from("Checksum is not valid."));
-  }
-
   (false, String::new())
 }
 
+/// Get the Base32 representation of a char.
+/// First it gets its ASCII representation, then uses `CHARSET_REV`
+/// to get the index by which this ASCII can be represented in the
+/// Base32 format.
+///
+/// BASE32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+///
+/// Example:
+///
+/// ```rust
+/// assert_eq!(0, get_base32_byte_representation('q'));
+/// assert_eq!(1, get_base32_byte_representation('p'));
+/// ```
 fn get_base32_byte_representation(character: char) -> i8 {
   let character = character as u8; // ASCII representation
   CHARSET_REV[character as usize]
@@ -383,12 +418,14 @@ fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -
   checksum
 }
 
-fn verify_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -> bool {
+/// Verifies if the checksum is valid. Returns true is valid, false if isn't.
+///
+///   - `hrp`: human-readable part as Vec<u8> bytes.
+///   - `payload`: address payload made of {witness_version}{program}{checksum}
+///   - `encoding_type`: BECH32 (0x01) or BECH32M (0x2bc830a3) constants.
+fn verify_checksum(hrp: &Vec<u8>, payload: &Vec<u8>, encoding_type: EncodingType) -> bool {
   let mut exp = hrp_expand(hrp);
-  exp.extend_from_slice(data);
-
-  println!("Verify checksum polymod: {:?}", polymod(exp.clone()));
-
+  exp.extend_from_slice(payload);
   polymod(exp) == get_encoding_const(encoding_type)
 }
 
@@ -409,14 +446,14 @@ const GEN: [u32; 5] = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b
 
 fn polymod(values: Vec<u8>) -> u32 {
   let mut chk: u32 = 1;
-  let mut b: u8;
+  let mut top: u8;
   for v in values {
-    b = (chk >> 25) as u8;
+    top = (chk >> 25) as u8;
     chk = (chk & 0x1ffffff) << 5 ^ (v as u32);
     for i in 0..5 {
-      if ((b >> i) & 1) == 1 {
+      if ((top >> i) & 1) == 1 {
         chk ^= GEN[i];
-      } 
+      }
     }
   }
   chk
