@@ -99,6 +99,12 @@ fn test_generate_bech32m_address() {
   my_wallet.generate_bech32m_address_from_public_key(public_key);
 }
 
+fn test_decode_bech32m_address(){
+  let my_wallet = wallet::Wallet {};
+  let address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3");
+  my_wallet.get_info_from_bech32m_address(address);
+}
+
 fn main() {
-  test_pow()
+  test_decode_bech32m_address()
 }

@@ -115,6 +115,13 @@ impl Wallet {
     println!("Bech32m encoded: {}", encoded);
     encoded
   }
+
+  pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Bech32 {
+    let bech32m = Bech32::empty();
+    bech32m.decode(bech32m_address);
+
+    bech32m
+  }
 }
 
 fn ripemd160_hasher(data: String) -> String {
@@ -193,7 +200,7 @@ const CHARSET: [char; 32] = [
 ];
 
 // Reverse character set. Maps ASCII byte -> CHARSET index on [0,31]
-const _CHARSET_REV: [i8; 128] = [
+const CHARSET_REV: [i8; 128] = [
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   15, -1, 10, 17, 21, 20, 26, 30, 7, 5, -1, -1, -1, -1, -1, -1, -1, 29, -1, 24, 13, 25, 9, 8, 23,
@@ -203,6 +210,13 @@ const _CHARSET_REV: [i8; 128] = [
 ];
 
 impl Bech32 {
+  fn empty() -> Self {
+    Bech32{
+      data: Vec::<u8>::new(),
+      hrp: String::new(),
+    }
+  }
+
   fn new(hrp: String, data: Vec<u8>) -> Self {
     Bech32 { hrp, data }
   }
@@ -232,6 +246,33 @@ impl Bech32 {
 
     encoded
   }
+
+  fn decode(&self, address: String) -> Self {
+    let separated_data: Vec<&str> = address.split(SEPARATOR).collect();
+    let hrp: &str = separated_data[0];
+    let payload: &str = separated_data[1];
+
+    validate_decode(hrp, payload);
+
+    Bech32{
+      data: Vec::<u8>::new(),
+      hrp: String::new(),
+    }
+  }  
+}
+
+fn validate_decode(hrp: &str, payload: &str) -> bool {
+  if hrp != MAIN_NET_BTC {
+    return false;
+  }
+
+  let witness_version = payload.chars().nth(0).unwrap() as u8; // ASCII table representation
+  let witness_version = CHARSET_REV[witness_version as usize];
+
+  println!("{:?}", witness_version);
+
+
+  true
 }
 
 /* Checksum functions */
