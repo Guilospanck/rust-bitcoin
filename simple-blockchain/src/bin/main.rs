@@ -52,7 +52,7 @@ fn test_pow() {
     merkle_root,
     timestamp: 1654455888,
     bits: 486_604_799,
-    nonce: 750_730_123,
+    nonce: 0, // 750_730_123
   };
 
   println!("{:?}\n", block_header);
@@ -92,9 +92,13 @@ fn test_merkle_root() {
   println!("root {}", merkle_root);
 }
 
-fn main() {
-  let my_wallet = wallet::Wallet{};
+fn test_generate_bech32m_address() {
+  let my_wallet = wallet::Wallet {};
   let private_key = my_wallet.generate_private_key();
   let public_key = my_wallet.get_public_key_from_private_key(private_key);
   my_wallet.generate_bech32m_address_from_public_key(public_key);
+}
+
+fn main() {
+  test_pow()
 }

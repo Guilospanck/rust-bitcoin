@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use num::bigint::{BigInt, BigUint};
+use num_bigint::{BigInt, Sign, BigUint};
 use num::pow::pow;
 use sha256::digest;
 
@@ -148,7 +148,8 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 /// This is a basic proof of work algorithm.
 pub fn mine_block(block_header: &mut BlockHeader) -> () {
   let target = get_target_representation(block_header.bits);
-  let decimal_target = BigInt::parse_bytes(&target.as_bytes(), 16).unwrap();
+  let target_as_bytes = hex::decode(&target).unwrap();
+  let decimal_target = BigInt::from_bytes_be(Sign::Plus, &target_as_bytes);
 
   for nonce in 0..MAX_NONCE {
     block_header.nonce = nonce;
