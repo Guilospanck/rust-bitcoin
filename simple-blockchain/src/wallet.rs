@@ -1,10 +1,10 @@
+use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
+use crate::helpers::{convert_bits, ripemd160_hasher};
 use hex;
 use num_bigint::{BigInt, Sign};
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
-use crate::bech32::{Bech32, Bech32Decoded, MAIN_NET_BTC, EncodingType};
-use crate::helpers::{convert_bits, ripemd160_hasher};
 
 /// A wallet contains our addresses and keys.
 ///
@@ -118,18 +118,23 @@ impl Wallet {
     witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
 
     let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
-    let encoded = bech32.encode(EncodingType::BECH32M);
-
-    println!("Bech32m encoded: {}", encoded);
-    encoded
+    match bech32.encode(EncodingType::BECH32M) {
+      Ok(encoded) => {
+        println!("Bech32m encoded: {}", encoded);
+        return encoded;
+      }
+      Err(error) => eprintln!("{}", error),
+    }
   }
 
   pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Bech32Decoded {
     let bech32m = Bech32::empty();
-    let decoded = bech32m.decode(bech32m_address);
-
-    decoded
+    match bech32m.decode(bech32m_address) {
+      Ok(decoded) => {
+        println!("Bech32m decoded: {:?}", decoded);
+        return decoded;
+      }
+      Err(error) => eprintln!("{}", error),
+    }
   }
 }
-
-

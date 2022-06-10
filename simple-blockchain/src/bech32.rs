@@ -1,4 +1,26 @@
 use crate::helpers::{convert_bits};
+use std::result;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+enum Bech32Error {
+  #[error("Invalid length")]
+  InvalidLength,
+  #[error("Invalid data")]
+  InvalidData,
+  #[error("Invalid HRP. It must be 'bc'")]
+  InvalidHRP,
+  #[error("Checksum is not valid")]
+  InvalidChecksum,
+  #[error("Invalid witness version. Must be between 0 and 16")]
+  InvalidWitnessVersion,
+  #[error("There must be 2 - 40 groups")]
+  InvalidProgramLength,
+  #[error("Wrong witness version. When program is 20 or 32 bytes, witness version must be 0")]
+  WrongWitnessVersion,
+}
+
+type Result<T> = result::Result<T, Bech32Error>;
 
 /// Bech32 (Bech32m)
 ///
@@ -64,11 +86,12 @@ const CHARSET_REV: [i8; 128] = [
 ];
 
 const MIN_HRP_LENGTH: usize = 1;
+const MAX_HRP_LENGTH: usize = 83;
 const SEPARATOR_LENGTH: usize = 1;
 const CHECKSUM_LENGTH: usize = 6;
 // Address constants
 const MIN_ADDRESS_LENGTH: usize = MIN_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH;
-const MAX_ADDRESS_LENGTH: usize = 90;
+const MAX_ADDRESS_LENGTH: usize = MAX_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH;
 
 impl Bech32 {
   pub fn empty() -> Self {
@@ -82,10 +105,9 @@ impl Bech32 {
     Bech32 { hrp, payload }
   }
 
-  pub fn encode(&self, encoding_type: EncodingType) -> String {
-    if self.hrp.len() < 1 || self.hrp.len() > 83 {
-      // invalid length error
-      return "Error: invalid length".to_owned();
+  pub fn encode(&self, encoding_type: EncodingType) -> Result<String> {
+    if self.hrp.len() < MIN_HRP_LENGTH || self.hrp.len() > MAX_HRP_LENGTH {
+      return Err(Bech32Error::InvalidLength);
     }
 
     let mut encoded = self.hrp.clone();
@@ -99,18 +121,18 @@ impl Bech32 {
 
     for i in combined {
       if i >= 32 {
-        return "Invalid data".to_owned();
+        return Err(Bech32Error::InvalidData);
       }
 
       encoded.push(CHARSET[i as usize]);
     }
 
-    encoded
+    Ok(encoded)
   }
 
-  pub fn decode(&self, address: String) -> Bech32Decoded {
+  pub fn decode(&self, address: String) -> Result<Bech32Decoded> {
     if address.len() < MIN_ADDRESS_LENGTH || address.len() > MAX_ADDRESS_LENGTH {
-      panic!("Error: Invalid length.");
+      return Err(Bech32Error::InvalidLength);
     }
 
     let separated_data: Vec<&str> = address.split(SEPARATOR).collect();
@@ -120,11 +142,11 @@ impl Bech32 {
     let payload_length = payload.len();
 
     if hrp.len() < MIN_HRP_LENGTH || payload_length < CHECKSUM_LENGTH {
-      panic!("Error: Invalid length.");
+      return Err(Bech32Error::InvalidLength);
     }
 
     if hrp != MAIN_NET_BTC {
-      panic!("Error: Invalid HRP. It must be 'bc'.")
+      return Err(Bech32Error::InvalidHRP);      
     }
 
     let hrp_bytes = hrp.to_owned().into_bytes();
@@ -146,15 +168,15 @@ impl Bech32 {
     }
 
     if !verify_checksum(&hrp_bytes, &payload_bytes, encoding_type) {
-      panic!("Checksum is not valid.");
+      return Err(Bech32Error::InvalidChecksum);      
     }
 
     // Validates decoding
     let program = payload_bytes[witness_version_length..payload_length - CHECKSUM_LENGTH].to_vec();
     let program_as_8_bits = convert_bits(5, 8, program);
-    let (err, err_msg) = validate_decode(witness_version, program_as_8_bits.clone());
-    if err {
-      panic!("{}", err_msg);
+    match validate_decode(witness_version, program_as_8_bits.clone()) {
+      Ok(_) => (),
+      Err(err) => return Err(err),
     }
 
     let program_hex = hex::encode(&program_as_8_bits);
@@ -167,35 +189,29 @@ impl Bech32 {
       checksum: checksum.to_owned(),
     };
 
-    Bech32Decoded {
+    Ok(Bech32Decoded {
       hrp: hrp.to_owned(),
       payload: payload_struct,
-    }
+    })
   }
 }
 
-fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> (bool, String) {
+fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<bool> {
   if witness_version < 0 || witness_version > 16 {
-    return (
-      true,
-      String::from("Wrong witness version. Must be between 0 and 16."),
-    );
+    return Err(Bech32Error::InvalidWitnessVersion);     
   }
 
   // validate 2 - 40 groups
   if program_as_8_bits.len() < 2 || program_as_8_bits.len() > 40 {
-    return (
-      true,
-      String::from("Error: There must be 2 - 40 groups. Data error."),
-    );
+    return Err(Bech32Error::InvalidProgramLength);  
   }
 
   // validate version and bytes of the program
   if witness_version == 0 && (program_as_8_bits.len() != 20 && program_as_8_bits.len() != 32) {
-    return (true, String::from("Error: Invalid version length."));
+    return Err(Bech32Error::WrongWitnessVersion);  
   }
 
-  (false, String::new())
+  Ok(false)
 }
 
 /// Get the Base32 representation of a char.

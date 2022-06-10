@@ -16,3 +16,4 @@ rand = { version = "0.8.5",  features = ["std"] }
 secp256k1 = "0.22.1"
 hex = "0.4.3"
 ripemd = "0.1.1"
+thiserror = "1.0.31"
