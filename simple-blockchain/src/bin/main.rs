@@ -1,6 +1,7 @@
 use btc::helpers;
 use btc::wallet;
 use btc::{BlockHeader, Transaction};
+use btc::bech32::{Bech32, MAIN_NET_BTC, EncodingType};
 use chrono::prelude::*;
 use sha256::digest;
 use std::time::Instant;
@@ -102,21 +103,21 @@ fn test_generate_bech32m_address() {
 fn test_encode_bech32m_address() {
   let hash160_public_key = String::from("2b002b9cfbddaa36ce8458b3d11c9478efd7980f");
   let hash160_as_vec_u8 = hex::decode(&hash160_public_key).unwrap();
-  let hash160_as_base32 = wallet::convert_bits(8, 5, hash160_as_vec_u8);
+  let hash160_as_base32 = helpers::convert_bits(8, 5, hash160_as_vec_u8);
 
   // witness version
   let mut witness_version_plus_hash160 = vec![1u8];
   witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
 
-  let bech32 = wallet::Bech32::new(wallet::MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
-  let encoded = bech32.encode(wallet::EncodingType::BECH32M);
+  let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
+  let encoded = bech32.encode(EncodingType::BECH32M);
   println!("{:?}", encoded);
 }
 
 fn test_decode_bech32m_address(){
   let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
   // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
-  let bech32m = wallet::Bech32::empty();
+  let bech32m = Bech32::empty();
   let decoded = bech32m.decode(bech32m_address);
   println!("{:?}", decoded);
 }

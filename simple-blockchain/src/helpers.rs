@@ -2,6 +2,7 @@ use chrono::prelude::*;
 use num_bigint::{BigInt, Sign, BigUint};
 use num::pow::pow;
 use sha256::digest;
+use ripemd::{Digest, Ripemd160};
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -146,10 +147,17 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 }
 
 /// This is a basic proof of work algorithm.
+/// It receives a mutable `BlockHeader`, gets the 
+/// target representation of the `bits` (see `get_target_representation()`) and
+/// finally loops through all nonces (0 - MAX_NONCE), sha256 hashing the result
+/// and comparing if it is less than or equal to the bits.
+/// 
+/// When the whole nonce spectrum is used and a valid hash wasn't found, it then
+/// updates the block timestamp and tries again.
 pub fn mine_block(block_header: &mut BlockHeader) -> () {
   let target = get_target_representation(block_header.bits);
   let target_as_bytes = hex::decode(&target).unwrap();
-  let decimal_target = BigInt::from_bytes_be(Sign::Plus, &target_as_bytes);
+  let target_as_decimal = BigInt::from_bytes_be(Sign::Plus, &target_as_bytes);
 
   for nonce in 0..MAX_NONCE {
     block_header.nonce = nonce;
@@ -157,14 +165,10 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
     let stringfied = serde_json::to_string(&block_header).unwrap();
 
     let hash = digest(&stringfied);
-    if hash.starts_with("0000000") {
-      println!("Nonce:        {}", nonce);
-      println!("Block hashed: {}", hash);
-    }
 
     let decimal_hash = BigInt::parse_bytes(&hash.as_bytes(), 16).unwrap();
 
-    if decimal_hash <= decimal_target {
+    if decimal_hash <= target_as_decimal {
       return;
     }
   }
@@ -175,4 +179,44 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 
   block_header.timestamp = timestamp;
   mine_block(block_header);
+}
+
+/// Gets the RIPEMD160 representation of a string.
+/// On Bitcoin it's used for generating address from a Public Key (K), like
+/// `RIPEMD160(SHA256(K))`
+pub fn ripemd160_hasher(data: String) -> String {
+  let mut hasher = Ripemd160::new();
+  hasher.update(data);
+  let result = hasher.finalize();
+
+  format!("{:x}", result)
+}
+
+/// Converts a vector of bytes from a representation to another.
+/// 
+/// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#segwit-address-format 
+/// for more information in how it does the calculation.
+pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
+  let mut bits = String::new();
+  for byte in data_bytes {
+    bits.push_str(&format!("{:0from$b}", byte, from = from as usize));
+  }
+
+  let divisible_by_five = (bits.len() % (to as usize)) == 0;
+
+  if !divisible_by_five {
+    let bits_to_pad = (to as usize) - (bits.len() % (to as usize));
+    for _i in 0..bits_to_pad {
+      bits.push('0');
+    }
+  }
+
+  let mut grouped: Vec<u8> = Vec::new();
+
+  for i in (0..bits.len()).step_by(to as usize) {
+    let bits_as_decimal = u8::from_str_radix(&bits[i..(i + to as usize)], 2).unwrap();
+    grouped.push(bits_as_decimal);
+  }
+
+  grouped
 }
