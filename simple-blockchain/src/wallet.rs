@@ -1,4 +1,4 @@
-use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
+use crate::bech32::{Bech32, Bech32Decoded, EncodingType, Payload, MAIN_NET_BTC};
 use crate::helpers::{convert_bits, ripemd160_hasher};
 use hex;
 use num_bigint::{BigInt, Sign};
@@ -123,10 +123,24 @@ impl Wallet {
         println!("Bech32m encoded: {}", encoded);
         return encoded;
       }
-      Err(error) => eprintln!("{}", error),
+      Err(error) => {
+        eprintln!("{}", error);
+        return "".to_owned();
+      },
     }
   }
 
+  /// Gets information from a Bech32 (or Bech32m) address.
+  ///
+  /// Example:
+  /// ```rust
+  /// let wallet = Wallet{};
+  /// let bech32_address = "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned();
+  /// let bech32_decoded = wallet.get_info_from_bech32m_address(bech32_address);
+  ///
+  /// // tests
+  /// assert_eq!(bech32_decoded, Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
+  /// ```
   pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Bech32Decoded {
     let bech32m = Bech32::empty();
     match bech32m.decode(bech32m_address) {
@@ -134,7 +148,10 @@ impl Wallet {
         println!("Bech32m decoded: {:?}", decoded);
         return decoded;
       }
-      Err(error) => eprintln!("{}", error),
+      Err(error) => {
+        eprintln!("{}", error);
+        return Bech32Decoded::empty();
+      }
     }
   }
 }

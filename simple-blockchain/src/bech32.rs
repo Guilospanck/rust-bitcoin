@@ -1,9 +1,9 @@
-use crate::helpers::{convert_bits};
+use crate::helpers::convert_bits;
 use std::result;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum Bech32Error {
+pub enum Bech32Error {
   #[error("Invalid length")]
   InvalidLength,
   #[error("Invalid data")]
@@ -62,6 +62,19 @@ pub struct Payload {
   witness_version: String,
   program: String,
   checksum: String,
+}
+
+impl Bech32Decoded {
+  pub fn empty() -> Self {
+    Bech32Decoded {
+      hrp: "".to_owned(),
+      payload: Payload {
+        witness_version: "".to_owned(),
+        program: "".to_owned(),
+        checksum: "".to_owned(),
+      },
+    }
+  }
 }
 
 pub const MAIN_NET_BTC: &str = "bc";
@@ -146,7 +159,7 @@ impl Bech32 {
     }
 
     if hrp != MAIN_NET_BTC {
-      return Err(Bech32Error::InvalidHRP);      
+      return Err(Bech32Error::InvalidHRP);
     }
 
     let hrp_bytes = hrp.to_owned().into_bytes();
@@ -154,7 +167,6 @@ impl Bech32 {
     // Get witness version as base32 byte (0, 1, 2...16)
     let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
     let witness_version_length = witness_version.to_string().len();
-    
     // Get 5 bits representation of payload ({witness_version}{program}{checksum})
     let mut payload_bytes = Vec::<u8>::new();
     for character in payload.chars() {
@@ -168,7 +180,7 @@ impl Bech32 {
     }
 
     if !verify_checksum(&hrp_bytes, &payload_bytes, encoding_type) {
-      return Err(Bech32Error::InvalidChecksum);      
+      return Err(Bech32Error::InvalidChecksum);
     }
 
     // Validates decoding
@@ -198,17 +210,17 @@ impl Bech32 {
 
 fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<bool> {
   if witness_version < 0 || witness_version > 16 {
-    return Err(Bech32Error::InvalidWitnessVersion);     
+    return Err(Bech32Error::InvalidWitnessVersion);
   }
 
   // validate 2 - 40 groups
   if program_as_8_bits.len() < 2 || program_as_8_bits.len() > 40 {
-    return Err(Bech32Error::InvalidProgramLength);  
+    return Err(Bech32Error::InvalidProgramLength);
   }
 
   // validate version and bytes of the program
   if witness_version == 0 && (program_as_8_bits.len() != 20 && program_as_8_bits.len() != 32) {
-    return Err(Bech32Error::WrongWitnessVersion);  
+    return Err(Bech32Error::WrongWitnessVersion);
   }
 
   Ok(false)
