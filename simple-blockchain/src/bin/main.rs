@@ -115,7 +115,7 @@ fn test_encode_bech32m_address() {
 }
 
 fn test_decode_bech32m_address(){
-  let bech32m_address = String::from("bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7"); // bech32m
+  let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
   // let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
   // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
   let bech32m = Bech32::empty();

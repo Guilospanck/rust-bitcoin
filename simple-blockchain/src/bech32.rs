@@ -18,6 +18,12 @@ pub enum Bech32Error {
   InvalidProgramLength,
   #[error("Wrong witness version. When program is 20 or 32 bytes, witness version must be 0")]
   WrongWitnessVersion,
+  #[error("Missing separator")]
+  MissingSeparator,
+  #[error("Invalid program char")]
+  InvalidChar,
+  #[error("Invalid program: Mixed case")]
+  MixedCase,
 }
 
 type Result<T> = result::Result<T, Bech32Error>;
@@ -103,10 +109,11 @@ const MAX_HRP_LENGTH: usize = 83;
 const SEPARATOR_LENGTH: usize = 1;
 const CHECKSUM_LENGTH: usize = 6;
 // Address constants
-const MIN_ADDRESS_LENGTH: usize = MIN_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH;
-const MAX_ADDRESS_LENGTH: usize = MAX_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH;
+const MIN_ADDRESS_LENGTH: usize = MIN_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH; // 8
+const MAX_ADDRESS_LENGTH: usize = MAX_HRP_LENGTH + SEPARATOR_LENGTH + CHECKSUM_LENGTH; // 90
 
 impl Bech32 {
+  /// Returns an empty Bech32 struct.
   pub fn empty() -> Self {
     Bech32 {
       payload: Vec::<u8>::new(),
@@ -114,10 +121,18 @@ impl Bech32 {
     }
   }
 
+  /// Creates a new Bech32 struct.
+  /// - `hrp`: Human-readable part, usually 'bc' (BTC mainnet);
+  /// - `payload`: {witness_version}{program} as Base32 vector of bytes, where:
+  ///    - `witness_version`: 0..16
+  ///    - `program`: Base32(HASH160(K))
   pub fn new(hrp: String, payload: Vec<u8>) -> Self {
     Bech32 { hrp, payload }
   }
 
+  /// Will return a encoded Bech32(m) address from a previous Bech32 struct created.
+  /// If something goes wrong with the encoding, will return an error.
+  /// - `encoding_type`: BECH32 or BECH32M
   pub fn encode(&self, encoding_type: EncodingType) -> Result<String> {
     if self.hrp.len() < MIN_HRP_LENGTH || self.hrp.len() > MAX_HRP_LENGTH {
       return Err(Bech32Error::InvalidLength);
@@ -143,9 +158,16 @@ impl Bech32 {
     Ok(encoded)
   }
 
+  /// Gets info from a Bech32(m) address. If something is not right, will return
+  /// an error.
+  /// - `address`: the bech32(m) address that you wanna have information about.
   pub fn decode(&self, address: String) -> Result<Bech32Decoded> {
     if address.len() < MIN_ADDRESS_LENGTH || address.len() > MAX_ADDRESS_LENGTH {
       return Err(Bech32Error::InvalidLength);
+    }
+
+    if address.find(SEPARATOR).is_none() {
+      return Err(Bech32Error::MissingSeparator);
     }
 
     let separated_data: Vec<&str> = address.split(SEPARATOR).collect();
@@ -167,11 +189,10 @@ impl Bech32 {
     // Get witness version as base32 byte (0, 1, 2...16)
     let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
     let witness_version_length = witness_version.to_string().len();
+
     // Get 5 bits representation of payload ({witness_version}{program}{checksum})
     let mut payload_bytes = Vec::<u8>::new();
-    for character in payload.chars() {
-      payload_bytes.push(get_base32_byte_representation(character) as u8);
-    }
+    validates_and_get_base32_representation_of_payload(payload, &mut payload_bytes)?;
 
     // Validates checksum
     let mut encoding_type: EncodingType = EncodingType::BECH32;
@@ -186,10 +207,7 @@ impl Bech32 {
     // Validates decoding
     let program = payload_bytes[witness_version_length..payload_length - CHECKSUM_LENGTH].to_vec();
     let program_as_8_bits = convert_bits(5, 8, program);
-    match validate_decode(witness_version, program_as_8_bits.clone()) {
-      Ok(_) => (),
-      Err(err) => return Err(err),
-    }
+    validate_decode(witness_version, program_as_8_bits.clone())?;
 
     let program_hex = hex::encode(&program_as_8_bits);
 
@@ -208,7 +226,48 @@ impl Bech32 {
   }
 }
 
-fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<bool> {
+/// Validates mixed case in the payload bytes, as well as
+/// character validation (if it's in the ASCII range accepted).
+/// Then, it modifies the `payload_bytes` to have the Base32 byte format.
+fn validates_and_get_base32_representation_of_payload(
+  payload: &str,
+  payload_bytes: &mut Vec<u8>,
+) -> Result<()> {
+  let mut has_lower: bool = false;
+  let mut has_upper: bool = false;
+
+  for b in payload.bytes() {
+    // Aphanumeric only
+    if !((b >= b'0' && b <= b'9') || (b >= b'A' && b <= b'Z') || (b >= b'a' && b <= b'z')) {
+      return Err(Bech32Error::InvalidChar);
+    }
+    // Excludes these characters: [1,b,i,o]
+    if b == b'1' || b == b'b' || b == b'i' || b == b'o' {
+      return Err(Bech32Error::InvalidChar);
+    }
+    // Lowercase
+    if b >= b'a' && b <= b'z' {
+      has_lower = true;
+    }
+    let mut c = b;
+    // Uppercase
+    if b >= b'A' && b <= b'Z' {
+      has_upper = true;
+      // Convert to lowercase
+      c = b + (b'a' - b'A');
+    }
+    payload_bytes.push(CHARSET_REV[c as usize] as u8);
+  }
+
+  // Ensure no mixed case
+  if has_lower && has_upper {
+    return Err(Bech32Error::MixedCase);
+  }
+
+  Ok(())
+}
+
+fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<()> {
   if witness_version < 0 || witness_version > 16 {
     return Err(Bech32Error::InvalidWitnessVersion);
   }
@@ -223,7 +282,7 @@ fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<bo
     return Err(Bech32Error::WrongWitnessVersion);
   }
 
-  Ok(false)
+  Ok(())
 }
 
 /// Get the Base32 representation of a char.

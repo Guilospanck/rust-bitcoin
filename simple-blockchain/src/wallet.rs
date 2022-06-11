@@ -1,4 +1,4 @@
-use crate::bech32::{Bech32, Bech32Decoded, EncodingType, Payload, MAIN_NET_BTC};
+use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
 use crate::helpers::{convert_bits, ripemd160_hasher};
 use hex;
 use num_bigint::{BigInt, Sign};
