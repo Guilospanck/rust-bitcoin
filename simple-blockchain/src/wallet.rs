@@ -184,7 +184,7 @@ impl Wallet {
   ///
   /// If a passphrase is not used, an empty string is used instead.
   ///
-  pub fn generate_mnemonic(&self, entropy: Vec<u8>) -> () {
+  pub fn generate_mnemonic(&self, entropy: Vec<u8>) -> () {    
     let entropy_length = entropy.len() * 8;
 
     if entropy_length < 128 || entropy_length > 256 {
@@ -199,18 +199,18 @@ impl Wallet {
 
     let entropy_as_bits: String = entropy.iter().map(|v| format!("{:08b}", v)).collect();
 
-    // Get bits representation of the SHA256(entropy)    
-    let sha256_entropy = sha256::digest(format!("{:?}", &entropy));
+    // Get bits representation of the SHA256(entropy)   
+    let sha256_entropy = sha256::digest_bytes(&entropy);
     let sha256_entropy_as_bytes = hex::decode(&sha256_entropy).unwrap();
     let sha256_entropy_as_bits: String = sha256_entropy_as_bytes
       .iter()
-      .map(|v| format!("{:b}", v))
+      .map(|v| format!("{:08b}", v))
       .collect();
-
+    
     // Get checksum
     let num_bits_of_checksum: usize = entropy_length / 32;
     let checksum = &sha256_entropy_as_bits[..num_bits_of_checksum];
-    
+
     // Append checksum to the end of initial entropy
     let entropy = format!("{}{}", entropy_as_bits, checksum);
 
