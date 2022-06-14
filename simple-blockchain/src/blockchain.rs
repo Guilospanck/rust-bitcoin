@@ -1,6 +1,6 @@
 use crate::block::{Block, BlockHeader};
-use crate::transaction::{Transaction};
 use crate::helpers;
+use crate::transaction::Transaction;
 use chrono::prelude::*;
 
 pub struct Blockchain {
@@ -8,7 +8,9 @@ pub struct Blockchain {
 }
 
 // impl Blockchain {
-//   fn new() -> Blockchain {
+//   fn new() -> Blockchain {}
+
+//   fn genesis_block() -> Block {
 //     let first_transaction = Transaction {
 //       from: "COINBASE".to_owned(),
 //       to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
@@ -30,8 +32,8 @@ pub struct Blockchain {
 //       merkle_root,
 //       timestamp,
 //       bits: 486_575_299,
-//       nonce: 0
-//     };    
+//       nonce: 0,
+//     };
 
 //     helpers::mine_block(&mut block_header);
 

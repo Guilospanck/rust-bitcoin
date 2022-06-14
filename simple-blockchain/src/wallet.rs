@@ -5,6 +5,8 @@ use num_bigint::{BigInt, Sign};
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
+use std::fs::File;
+use std::io::{prelude::*, BufReader};
 
 /// A wallet contains our addresses and keys.
 ///
@@ -13,12 +15,19 @@ use sha256::digest;
 /// From a public key we derive, using a one-way hashing function,
 /// a bitcoin address (A).
 ///
+/// There are two types of wallets: non-deterministic and deterministic (seeded).
+/// The first one each key is independently generated from a random number.
+/// The last one, all keys derive from a master key (also known as `seed`).
+///
+/// The most common way of derivation is the Hierarchical Deterministic (HD).
+///
+///
 #[derive(Debug)]
 pub struct Wallet {}
 
 impl Wallet {
   /// Generates a private key from a CSPRNG (cryptographically-secure pseudo-random number
-  /// generator) entropy and returns the SHA256 format of it.
+  /// generator) entropy and returns the decimal and SHA256 representation of it.
   ///
   /// This number must be less than a constant `(n = 1.158*10^77, which is slightly less than 2^256)`,
   /// in order to be able to derive it from a ECC curve.
@@ -28,7 +37,7 @@ impl Wallet {
   /// let wallet = Wallet{};
   /// let k = wallet.generate_private_key();
   /// ```
-  pub fn generate_private_key(&self) -> String {
+  pub fn generate_private_key(&self) -> (u128, String) {
     let maximum_private_key_value: BigInt =
       BigInt::from(1158u16) * BigInt::from(10u8).pow(74) - 1u8;
 
@@ -49,7 +58,7 @@ impl Wallet {
       hexadecimal_private_key
     );
 
-    hexadecimal_private_key
+    (random, hexadecimal_private_key)
   }
 
   /// Derives a Public Key (K) from a Private Key (k) using ECC
@@ -126,7 +135,7 @@ impl Wallet {
       Err(error) => {
         eprintln!("{}", error);
         return "".to_owned();
-      },
+      }
     }
   }
 
@@ -154,4 +163,93 @@ impl Wallet {
       }
     }
   }
+
+  /// Generating a mnemonic
+  ///
+  /// (See: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+  /// ENT: initial entropy length. 128-256 bits => must be a multiple of 32 bits.
+  /// CS: checksum
+  /// MS: mnemonic sentence in words
+  ///
+  /// CS = ENT / 32
+  /// MS = (ENT + CS) / 11
+  ///
+  /// |  ENT  | CS | ENT+CS |  MS  |
+  /// +-------+----+--------+------+
+  /// |  128  |  4 |   132  |  12  |
+  /// |  160  |  5 |   165  |  15  |
+  /// |  192  |  6 |   198  |  18  |
+  /// |  224  |  7 |   231  |  21  |
+  /// |  256  |  8 |   264  |  24  |
+  ///
+  /// If a passphrase is not used, an empty string is used instead.
+  ///
+  pub fn generate_mnemonic(&self, entropy: Vec<u8>) -> () {
+    let entropy_length = entropy.len() * 8;
+
+    if entropy_length < 128 || entropy_length > 256 {
+      println!("Error: entropy out of bonds. It must be between 128 and 256.");
+      return;
+    }
+
+    if entropy_length % 32 != 0 {
+      println!("Error: it must be multiple of 32 bits.");
+      return;
+    }
+
+    let entropy_as_bits: String = entropy.iter().map(|v| format!("{:08b}", v)).collect();
+
+    // Get bits representation of the SHA256(entropy)    
+    let sha256_entropy = sha256::digest(format!("{:?}", &entropy));
+    let sha256_entropy_as_bytes = hex::decode(&sha256_entropy).unwrap();
+    let sha256_entropy_as_bits: String = sha256_entropy_as_bytes
+      .iter()
+      .map(|v| format!("{:b}", v))
+      .collect();
+
+    // Get checksum
+    let num_bits_of_checksum: usize = entropy_length / 32;
+    let checksum = &sha256_entropy_as_bits[..num_bits_of_checksum];
+    
+    // Append checksum to the end of initial entropy
+    let entropy = format!("{}{}", entropy_as_bits, checksum);
+
+    if entropy.len() % 11 != 0 {
+      println!("Error: initial entropy + checksum must be multiple of 11");
+      return
+    }    
+
+    // group bits in groups of 11
+    let mut group: Vec<u16> = Vec::new();
+    for bit in (0..entropy.len()).step_by(11) {
+      let value: u16 = u16::from_str_radix(&entropy[bit..bit+11], 2).unwrap();
+      group.push(value);
+    }    
+
+    // read wordlist
+    let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
+      Ok(data) => data,
+      Err(err) => panic!("{}", err),
+    };
+
+    // get mnemonic
+    let mut mnemonic: Vec<String> = Vec::new();
+    for value in group {
+      mnemonic.push(wordlist[value as usize].clone());
+    }
+
+    println!("Seeds: {:?}", mnemonic);
+  }
+}
+
+fn read_from_a_file(path: String) -> std::io::Result<Vec<String>> {
+  let file = File::open(path)?;
+
+  let buf = BufReader::new(file);
+  let lines = buf
+    .lines()
+    .map(|l| l.expect("Could not parse line"))
+    .collect();
+
+  Ok(lines)
 }

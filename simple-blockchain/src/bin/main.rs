@@ -95,8 +95,8 @@ fn test_merkle_root() {
 
 fn test_generate_bech32m_address() {
   let my_wallet = wallet::Wallet {};
-  let private_key = my_wallet.generate_private_key();
-  let public_key = my_wallet.get_public_key_from_private_key(private_key);
+  let (_dec_private_key, sha256_dec_private_key) = my_wallet.generate_private_key();
+  let public_key = my_wallet.get_public_key_from_private_key(sha256_dec_private_key);
   my_wallet.generate_bech32m_address_from_public_key(public_key);
 }
 
@@ -124,6 +124,21 @@ fn test_decode_bech32m_address(){
 }
 
 fn main() {
-  // test_encode_bech32m_address();
-  test_decode_bech32m_address();
+  let my_wallet = wallet::Wallet {};
+  
+  // private key
+  // let (dec_priv_key, sha256_priv_key) = my_wallet.generate_private_key();
+  let dec_priv_key: u128 = 226296091940012619244294630313588417160;
+
+  // let dec_priv_key_as_bits = format!("{:b}", dec_priv_key);
+  // let sha256_priv_key_as_bytes = hex::decode(&sha256_priv_key).unwrap();
+  
+  // let sha256_priv_key_as_bits: String = sha256_priv_key_as_bytes.iter().map(|v| format!("{:b}", v)).collect();
+
+  // println!("{}", &dec_priv_key_as_bits[..4]);
+  // println!("{}", &sha256_priv_key_as_bits[..4]);
+  
+  // my_wallet.generate_mnemonic(dec_priv_key.to_be_bytes().to_vec());
+  my_wallet.generate_mnemonic([0x33, 0xE4, 0x6B, 0xB1, 0x3A, 0x74, 0x6E, 0xA4, 0x1C, 0xDD, 0xE4, 0x5C, 0x90, 0x84, 0x6A, 0x79].to_vec());
+  // my_wallet.generate_mnemonic([0x0C, 0x1E, 0x24, 0xE5, 0x91, 0x77, 0x79, 0xD2, 0x97, 0xE1, 0x4D, 0x45, 0xF1, 0x4E, 0x1A, 0x1A].to_vec());
 }
