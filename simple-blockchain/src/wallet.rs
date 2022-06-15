@@ -2,11 +2,16 @@ use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
 use crate::helpers::{convert_bits, ripemd160_hasher};
 use hex;
 use num_bigint::{BigInt, Sign};
+use pbkdf2::{
+  password_hash::{PasswordHasher, Salt},
+  Algorithm, Params, Pbkdf2,
+};
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha256::digest;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
+use unicode_normalization::UnicodeNormalization;
 
 /// A wallet contains our addresses and keys.
 ///
@@ -24,6 +29,10 @@ use std::io::{prelude::*, BufReader};
 ///
 #[derive(Debug)]
 pub struct Wallet {}
+
+const PBKDF2_ITERATION_COUNT: u32 = 2048;
+const PBKDF2_DERIVED_KEY_LENGTH_BYTES: usize = 64;
+const MNEMONIC_STRING: &str = "mnemonic";
 
 impl Wallet {
   /// Generates a private key from a CSPRNG (cryptographically-secure pseudo-random number
@@ -184,29 +193,28 @@ impl Wallet {
   ///
   /// If a passphrase is not used, an empty string is used instead.
   ///
-  pub fn generate_mnemonic(&self, entropy: Vec<u8>) -> () {    
+  pub fn generate_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Vec<String> {
     let entropy_length = entropy.len() * 8;
 
     if entropy_length < 128 || entropy_length > 256 {
       println!("Error: entropy out of bonds. It must be between 128 and 256.");
-      return;
+      panic!();
     }
 
     if entropy_length % 32 != 0 {
       println!("Error: it must be multiple of 32 bits.");
-      return;
+      panic!();
     }
 
     let entropy_as_bits: String = entropy.iter().map(|v| format!("{:08b}", v)).collect();
 
-    // Get bits representation of the SHA256(entropy)   
+    // Get bits representation of the SHA256(entropy)
     let sha256_entropy = sha256::digest_bytes(&entropy);
     let sha256_entropy_as_bytes = hex::decode(&sha256_entropy).unwrap();
     let sha256_entropy_as_bits: String = sha256_entropy_as_bytes
       .iter()
       .map(|v| format!("{:08b}", v))
       .collect();
-    
     // Get checksum
     let num_bits_of_checksum: usize = entropy_length / 32;
     let checksum = &sha256_entropy_as_bits[..num_bits_of_checksum];
@@ -216,15 +224,15 @@ impl Wallet {
 
     if entropy.len() % 11 != 0 {
       println!("Error: initial entropy + checksum must be multiple of 11");
-      return
-    }    
+      panic!();
+    }
 
     // group bits in groups of 11
     let mut group: Vec<u16> = Vec::new();
     for bit in (0..entropy.len()).step_by(11) {
-      let value: u16 = u16::from_str_radix(&entropy[bit..bit+11], 2).unwrap();
+      let value: u16 = u16::from_str_radix(&entropy[bit..bit + 11], 2).unwrap();
       group.push(value);
-    }    
+    }
 
     // read wordlist
     let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
@@ -238,8 +246,70 @@ impl Wallet {
       mnemonic.push(wordlist[value as usize].clone());
     }
 
-    println!("Seeds: {:?}", mnemonic);
+    println!("Mnemonic: {:?}", mnemonic);
+    mnemonic
   }
+
+  pub fn get_seed_from_mnemonic(&self, mnemonic: Vec<String>, passphrase: Option<String>) -> () {
+    // Verify passphrase. If a passphrase is not used, an empty string is used instead.
+    let passphrase: String = match passphrase {
+      Some(pass) => pass,
+      None => "".to_owned(),
+    };
+
+    let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
+    let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
+
+    let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
+    let normalized_salt = salt.nfkd().to_string();
+
+    // uses PBKDF2 function with:
+    // password: mnemonic sentence
+    // salt: mnemonic+passphrase
+    // iteration_count: 2048
+    // pseudo-random function: SHA512
+    // derived key length: 512 bits (64 bytes)
+    get_pbkdf2_sha512(
+      stringfied_mnemonic,
+      normalized_salt,
+      PBKDF2_ITERATION_COUNT,
+      PBKDF2_DERIVED_KEY_LENGTH_BYTES,
+    );
+  }
+}
+
+fn get_pbkdf2_sha512(
+  password: String,
+  salt: String,
+  iteration_count: u32,
+  derived_key_length_bytes: usize,
+) -> String {
+  let password = password.as_bytes();
+  let salt = Salt::new(&salt).unwrap();
+  let params = Params {
+    rounds: iteration_count,
+    output_length: derived_key_length_bytes,
+  };
+
+  // fn hash_password_customized<'a>(
+  // &self, password: &[u8],
+  // alg_id: Option<Ident<'a>>,
+  // version: Option<Decimal>,
+  // params: Params,
+  // salt: impl Into<Salt<'a>>, ) -> Result<PasswordHash<'a>>
+  let hash = Pbkdf2
+    .hash_password_customized(
+      password,
+      Some(Algorithm::Pbkdf2Sha512.ident()),
+      None,
+      params,
+      salt,
+    )
+    .unwrap();
+
+  println!("Seed: {:?}", hex::encode(hash.hash.unwrap().as_bytes()));
+
+  "".to_owned()
 }
 
 fn read_from_a_file(path: String) -> std::io::Result<Vec<String>> {
