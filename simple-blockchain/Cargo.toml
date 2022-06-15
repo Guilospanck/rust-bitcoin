@@ -17,5 +17,7 @@ secp256k1 = "0.22.1"
 hex = "0.4.3"
 ripemd = "0.1.1"
 thiserror = "1.0.31"
-pbkdf2 = "0.11.0"
 unicode-normalization = "0.1.19"
+hmac = { version = "0.12", default-features = false }
+pbkdf2 = { version = "0.11", default-features = false }
+sha2 = { version = "0.10", default-features = false }

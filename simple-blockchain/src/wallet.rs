@@ -1,13 +1,11 @@
 use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
 use crate::helpers::{convert_bits, ripemd160_hasher};
 use hex;
+use hmac::Hmac;
 use num_bigint::{BigInt, Sign};
-use pbkdf2::{
-  password_hash::{PasswordHasher, Salt},
-  Algorithm, Params, Pbkdf2,
-};
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use sha2::Sha512;
 use sha256::digest;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
@@ -46,6 +44,7 @@ impl Wallet {
   /// let wallet = Wallet{};
   /// let k = wallet.generate_private_key();
   /// ```
+  ///
   pub fn generate_private_key(&self) -> (u128, String) {
     let maximum_private_key_value: BigInt =
       BigInt::from(1158u16) * BigInt::from(10u8).pow(74) - 1u8;
@@ -87,6 +86,7 @@ impl Wallet {
   /// let K = wallet.get_public_key_from_private_key(k);
   /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
   /// ```
+  ///
   pub fn get_public_key_from_private_key(&self, private_key: String) -> String {
     let private_key_bytes = hex::decode(private_key).unwrap();
     let secp = Secp256k1::new();
@@ -119,6 +119,7 @@ impl Wallet {
   /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K);
   /// assert_eq!(bech32m_address, "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
   /// ```
+  ///
   pub fn generate_bech32m_address_from_public_key(&self, public_key: String) -> String {
     let hashed_256_public_key = digest(&public_key);
     println!("SHA256 of Public Key (K): {}", hashed_256_public_key);
@@ -159,6 +160,7 @@ impl Wallet {
   /// // tests
   /// assert_eq!(bech32_decoded, Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
   /// ```
+  ///
   pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Bech32Decoded {
     let bech32m = Bech32::empty();
     match bech32m.decode(bech32m_address) {
@@ -191,7 +193,6 @@ impl Wallet {
   /// |  224  |  7 |   231  |  21  |
   /// |  256  |  8 |   264  |  24  |
   ///
-  /// If a passphrase is not used, an empty string is used instead.
   ///
   pub fn generate_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Vec<String> {
     let entropy_length = entropy.len() * 8;
@@ -263,55 +264,58 @@ impl Wallet {
     let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
     let normalized_salt = salt.nfkd().to_string();
 
-    // uses PBKDF2 function with:
-    // password: mnemonic sentence
-    // salt: mnemonic+passphrase
-    // iteration_count: 2048
-    // pseudo-random function: SHA512
-    // derived key length: 512 bits (64 bytes)
-    get_pbkdf2_sha512(
-      stringfied_mnemonic,
-      normalized_salt,
-      PBKDF2_ITERATION_COUNT,
-      PBKDF2_DERIVED_KEY_LENGTH_BYTES,
-    );
+    get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
   }
 }
 
-fn get_pbkdf2_sha512(
-  password: String,
-  salt: String,
-  iteration_count: u32,
-  derived_key_length_bytes: usize,
-) -> String {
+/// This is a helper function that gets the PBKDF2 (Password-Based Key Derivation Function 2) of the mnemonic phrase using
+/// HMAC-SHA512 and then return its seed.
+/// Args:
+///   - password: normalized (UTF-8 NFKD) mnemonic phrase.
+///   - salt: normalized (UTF-8 NFKD) string "mnemonic" concatenated with the passphrase (empty if None).
+///
+/// Example:
+/// ```rust
+///   use unicode_normalization::UnicodeNormalization;
+///
+///   const MNEMONIC_STRING: &str = "mnemonic";
+/// 
+///   let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
+/// 
+///   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
+///   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
+///
+///   let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
+///   let normalized_salt = salt.nfkd().to_string();
+///
+///   let seed = get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
+/// 
+///   assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
+/// ```
+///
+fn get_pbkdf2_sha512(password: String, salt: String) -> String {
   let password = password.as_bytes();
-  let salt = Salt::new(&salt).unwrap();
-  let params = Params {
-    rounds: iteration_count,
-    output_length: derived_key_length_bytes,
-  };
+  let salt = salt.as_bytes();
 
-  // fn hash_password_customized<'a>(
-  // &self, password: &[u8],
-  // alg_id: Option<Ident<'a>>,
-  // version: Option<Decimal>,
-  // params: Params,
-  // salt: impl Into<Salt<'a>>, ) -> Result<PasswordHash<'a>>
-  let hash = Pbkdf2
-    .hash_password_customized(
-      password,
-      Some(Algorithm::Pbkdf2Sha512.ident()),
-      None,
-      params,
-      salt,
-    )
-    .unwrap();
+  let mut seed = [0u8; PBKDF2_DERIVED_KEY_LENGTH_BYTES];
+  pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, PBKDF2_ITERATION_COUNT, &mut seed);
 
-  println!("Seed: {:?}", hex::encode(hash.hash.unwrap().as_bytes()));
-
-  "".to_owned()
+  let seed = format!("{}", hex::encode(seed));
+  println!("{}", seed);
+  seed
 }
 
+/// Helper function to read from a file and return its contents
+/// as a Vec<String>
+///
+/// Example:
+/// ```rust
+///  let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
+///   Ok(data) => data,
+///   Err(err) => panic!("{}", err),
+///  };
+/// ```
+///
 fn read_from_a_file(path: String) -> std::io::Result<Vec<String>> {
   let file = File::open(path)?;
 
