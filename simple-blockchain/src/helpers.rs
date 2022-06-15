@@ -3,6 +3,10 @@ use num_bigint::{BigInt, Sign, BigUint};
 use num::pow::pow;
 use sha256::digest;
 use ripemd::{Digest, Ripemd160};
+use std::fs::File;
+use std::io::{prelude::*, BufReader};
+use hmac::Hmac;
+use sha2::Sha512;
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -20,6 +24,10 @@ const _MAX_BITS: u32 = 486_604_799; // Genesis Block Bits = 0x1d00ffff
 
 const MAX_NONCE: u32 = 4_294_967_295; // 32 bits 2^32 -1
 
+/// PBKDF2 CONSTANTS
+const PBKDF2_ITERATION_COUNT: u32 = 2048;
+const PBKDF2_DERIVED_KEY_LENGTH_BYTES: usize = 64;
+
 /// This function gets the "target" representation of some "bits".
 /// It returns a String with the hexadecimal representation (32 Bytes - 64 chars) of the target.
 /// The formula is as follows:
@@ -35,6 +43,7 @@ const MAX_NONCE: u32 = 4_294_967_295; // 32 bits 2^32 -1
 /// let genesis_target = get_target_representation(486604799);
 /// println!("{:?}", genesis_target); // 00000000ffff0000000000000000000000000000000000000000000000000000
 /// ```
+/// 
 pub fn get_target_representation(bits: u32) -> String {
   let hex_representation = format!("{:x}", bits); // 1d00ffff
   let exponent = &hex_representation[..2]; // 1d
@@ -78,6 +87,7 @@ pub fn get_target_representation(bits: u32) -> String {
 /// let merkle_root = get_transactions_merkle_root(&mut transactions);
 /// println!("{}", merkle_root); // dab0bcbdb46f816630e838a4588c07b313f6ee21f501ca4f497718e63ead6855
 /// ```
+/// 
 pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> String {
   if transactions.len() == 0 {
     return "".to_owned();
@@ -109,6 +119,7 @@ pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> Stri
 
 /// let merkle_root = build_merkle_root(hashed_transactions);
 /// ```
+/// 
 pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
   if hashed_transactions.is_empty() {
     return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_owned();
@@ -154,6 +165,7 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 /// 
 /// When the whole nonce spectrum is used and a valid hash wasn't found, it then
 /// updates the block timestamp and tries again.
+/// 
 pub fn mine_block(block_header: &mut BlockHeader) -> () {
   let target = get_target_representation(block_header.bits);
   let target_as_bytes = hex::decode(&target).unwrap();
@@ -184,6 +196,7 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 /// Gets the RIPEMD160 representation of a string.
 /// On Bitcoin it's used for generating address from a Public Key (K), like
 /// `RIPEMD160(SHA256(K))`
+/// 
 pub fn ripemd160_hasher(data: String) -> String {
   let mut hasher = Ripemd160::new();
   hasher.update(data);
@@ -196,6 +209,7 @@ pub fn ripemd160_hasher(data: String) -> String {
 /// 
 /// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#segwit-address-format 
 /// for more information in how it does the calculation.
+/// 
 pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
   let mut bits = String::new();
   for byte in data_bytes {
@@ -219,4 +233,64 @@ pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
   }
 
   grouped
+}
+
+/// This is a helper function that gets the PBKDF2 (Password-Based Key Derivation Function 2) of the mnemonic phrase using
+/// HMAC-SHA512 and then return its seed.
+/// Args:
+///   - password: normalized (UTF-8 NFKD) mnemonic phrase.
+///   - salt: normalized (UTF-8 NFKD) string "mnemonic" concatenated with the passphrase (empty if None).
+///
+/// Example:
+/// ```rust
+///   use unicode_normalization::UnicodeNormalization;
+///
+///   const MNEMONIC_STRING: &str = "mnemonic";
+/// 
+///   let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
+/// 
+///   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
+///   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
+///
+///   let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
+///   let normalized_salt = salt.nfkd().to_string();
+///
+///   let seed = get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
+/// 
+///   assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
+/// ```
+///
+pub fn get_pbkdf2_sha512(password: String, salt: String) -> String {
+  let password = password.as_bytes();
+  let salt = salt.as_bytes();
+
+  let mut seed = [0u8; PBKDF2_DERIVED_KEY_LENGTH_BYTES];
+  pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, PBKDF2_ITERATION_COUNT, &mut seed);
+
+  let seed = format!("{}", hex::encode(seed));
+  println!("{}", seed);
+  seed
+}
+
+/// Helper function to read from a file and return its contents
+/// as a ```Vec<String>```.
+///
+/// Example:
+/// ```rust
+///  let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
+///   Ok(data) => data,
+///   Err(err) => panic!("{}", err),
+///  };
+/// ```
+///
+pub fn read_from_a_file_to_a_vec_string(path: String) -> std::io::Result<Vec<String>> {
+  let file = File::open(path)?;
+
+  let buf = BufReader::new(file);
+  let lines = buf
+    .lines()
+    .map(|l| l.expect("Could not parse line"))
+    .collect();
+
+  Ok(lines)
 }

@@ -1,15 +1,33 @@
 use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
-use crate::helpers::{convert_bits, ripemd160_hasher};
+use crate::helpers::{convert_bits, ripemd160_hasher, read_from_a_file_to_a_vec_string, get_pbkdf2_sha512};
 use hex;
-use hmac::Hmac;
 use num_bigint::{BigInt, Sign};
 use rand::prelude::*;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
-use sha2::Sha512;
 use sha256::digest;
-use std::fs::File;
-use std::io::{prelude::*, BufReader};
 use unicode_normalization::UnicodeNormalization;
+use std::result;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum WalletError {
+  #[error("Bech32 Encoding error: `{0}`")]
+  Bech32EncodingError(String),
+  #[error("Bech32 Decoding error: `{0}`")]
+  Bech32DecodingError(String),
+  #[error("IO error: `{0}`")]
+  IOError(String),
+  #[error("Error: entropy out of bonds. It must be between 128 and 256.")]
+  EntropyOutOfBonds,
+  #[error("Error: entropy must be multiple of 32 bits.")]
+  EntropyMustBe32Multiple,
+  #[error("Error: initial entropy + checksum must be multiple of 11.")]
+  EntropyPlusChecksumMustBe11Multiple,
+}
+
+type Result<T> = result::Result<T, WalletError>;
+
+const MNEMONIC_STRING: &str = "mnemonic";
 
 /// A wallet contains our addresses and keys.
 ///
@@ -27,10 +45,6 @@ use unicode_normalization::UnicodeNormalization;
 ///
 #[derive(Debug)]
 pub struct Wallet {}
-
-const PBKDF2_ITERATION_COUNT: u32 = 2048;
-const PBKDF2_DERIVED_KEY_LENGTH_BYTES: usize = 64;
-const MNEMONIC_STRING: &str = "mnemonic";
 
 impl Wallet {
   /// Generates a private key from a CSPRNG (cryptographically-secure pseudo-random number
@@ -120,7 +134,7 @@ impl Wallet {
   /// assert_eq!(bech32m_address, "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
   /// ```
   ///
-  pub fn generate_bech32m_address_from_public_key(&self, public_key: String) -> String {
+  pub fn generate_bech32m_address_from_public_key(&self, public_key: String) -> Result<String> {
     let hashed_256_public_key = digest(&public_key);
     println!("SHA256 of Public Key (K): {}", hashed_256_public_key);
     let ripemd160_hashed = ripemd160_hasher(hashed_256_public_key);
@@ -140,11 +154,10 @@ impl Wallet {
     match bech32.encode(EncodingType::BECH32M) {
       Ok(encoded) => {
         println!("Bech32m encoded: {}", encoded);
-        return encoded;
+        return Ok(encoded);
       }
       Err(error) => {
-        eprintln!("{}", error);
-        return "".to_owned();
+        return Err(WalletError::Bech32EncodingError(error.to_string()));
       }
     }
   }
@@ -161,21 +174,23 @@ impl Wallet {
   /// assert_eq!(bech32_decoded, Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
   /// ```
   ///
-  pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Bech32Decoded {
+  pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Result<Bech32Decoded> {
     let bech32m = Bech32::empty();
     match bech32m.decode(bech32m_address) {
       Ok(decoded) => {
         println!("Bech32m decoded: {:?}", decoded);
-        return decoded;
+        return Ok(decoded);
       }
       Err(error) => {
-        eprintln!("{}", error);
-        return Bech32Decoded::empty();
+        return Err(WalletError::Bech32DecodingError(error.to_string()));
       }
     }
   }
 
-  /// Generating a mnemonic
+  /// Generates a mnemonic from a vector of bytes (an entropy).
+  /// The entropy is anything that has size of 128 - 256 bits, as
+  /// a private key, for example - which you can generate
+  /// using the `generate_private_key()` method described above.
   ///
   /// (See: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
   /// ENT: initial entropy length. 128-256 bits => must be a multiple of 32 bits.
@@ -183,8 +198,10 @@ impl Wallet {
   /// MS: mnemonic sentence in words
   ///
   /// CS = ENT / 32
+  /// 
   /// MS = (ENT + CS) / 11
   ///
+  /// ```
   /// |  ENT  | CS | ENT+CS |  MS  |
   /// +-------+----+--------+------+
   /// |  128  |  4 |   132  |  12  |
@@ -192,19 +209,31 @@ impl Wallet {
   /// |  192  |  6 |   198  |  18  |
   /// |  224  |  7 |   231  |  21  |
   /// |  256  |  8 |   264  |  24  |
+  /// ```
+  /// 
+  /// Example:
+  /// ```rust
+  /// let my_wallet = wallet::Wallet {};
+  /// 
+  /// let entropy = &[0x0C, 0x1E, 0x24, 0xE5, 0x91, 0x77, 0x79, 0xD2, 0x97, 0xE1, 0x4D, 0x45, 0xF1, 0x4E, 0x1A, 0x1A].to_vec();
+  /// 
+  /// let mnemonic = match my_wallet.generate_mnemonic_from_entropy(entropy) {
+  ///   Ok(data) => data,
+  ///   Err(err) => panic!("{}", err),
+  /// };
+  /// 
+  /// assert_eq!(mnemonic, &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec());
+  /// ```
   ///
-  ///
-  pub fn generate_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Vec<String> {
+  pub fn generate_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Result<Vec<String>> {
     let entropy_length = entropy.len() * 8;
 
     if entropy_length < 128 || entropy_length > 256 {
-      println!("Error: entropy out of bonds. It must be between 128 and 256.");
-      panic!();
+      return Err(WalletError::EntropyOutOfBonds);
     }
 
     if entropy_length % 32 != 0 {
-      println!("Error: it must be multiple of 32 bits.");
-      panic!();
+      return Err(WalletError::EntropyMustBe32Multiple);
     }
 
     let entropy_as_bits: String = entropy.iter().map(|v| format!("{:08b}", v)).collect();
@@ -216,6 +245,7 @@ impl Wallet {
       .iter()
       .map(|v| format!("{:08b}", v))
       .collect();
+
     // Get checksum
     let num_bits_of_checksum: usize = entropy_length / 32;
     let checksum = &sha256_entropy_as_bits[..num_bits_of_checksum];
@@ -224,8 +254,7 @@ impl Wallet {
     let entropy = format!("{}{}", entropy_as_bits, checksum);
 
     if entropy.len() % 11 != 0 {
-      println!("Error: initial entropy + checksum must be multiple of 11");
-      panic!();
+      return Err(WalletError::EntropyPlusChecksumMustBe11Multiple);
     }
 
     // group bits in groups of 11
@@ -236,9 +265,9 @@ impl Wallet {
     }
 
     // read wordlist
-    let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
+    let wordlist: Vec<String> = match read_from_a_file_to_a_vec_string("./src/wordlist/english.txt".to_owned()) {
       Ok(data) => data,
-      Err(err) => panic!("{}", err),
+      Err(err) => return Err(WalletError::IOError(err.to_string()))
     };
 
     // get mnemonic
@@ -248,10 +277,27 @@ impl Wallet {
     }
 
     println!("Mnemonic: {:?}", mnemonic);
-    mnemonic
+    Ok(mnemonic)
   }
 
-  pub fn get_seed_from_mnemonic(&self, mnemonic: Vec<String>, passphrase: Option<String>) -> () {
+  /// Returns the seed that the mnemonic represents with its passphrase.
+  /// If a passphrase is not used, an empty string is used instead.
+  /// 
+  /// This function normalizees each word of the mnemonic using the UTF-8 NFKD normalization,
+  /// then it uses the PBKDF2 - SHA512 function (see `get_pbkdf2_sha512`) to derive the seed.
+  /// 
+  /// The seed is an 512 bits hexadecimal string.
+  /// 
+  /// Example:
+  /// ```rust
+  /// let my_wallet = wallet::Wallet {};
+  /// let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
+  /// 
+  /// let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  /// 
+  /// assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
+  /// ```
+  pub fn get_seed_from_mnemonic(&self, mnemonic: Vec<String>, passphrase: Option<String>) -> String {
     // Verify passphrase. If a passphrase is not used, an empty string is used instead.
     let passphrase: String = match passphrase {
       Some(pass) => pass,
@@ -264,66 +310,6 @@ impl Wallet {
     let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
     let normalized_salt = salt.nfkd().to_string();
 
-    get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
+    get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt)
   }
-}
-
-/// This is a helper function that gets the PBKDF2 (Password-Based Key Derivation Function 2) of the mnemonic phrase using
-/// HMAC-SHA512 and then return its seed.
-/// Args:
-///   - password: normalized (UTF-8 NFKD) mnemonic phrase.
-///   - salt: normalized (UTF-8 NFKD) string "mnemonic" concatenated with the passphrase (empty if None).
-///
-/// Example:
-/// ```rust
-///   use unicode_normalization::UnicodeNormalization;
-///
-///   const MNEMONIC_STRING: &str = "mnemonic";
-/// 
-///   let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
-/// 
-///   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
-///   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
-///
-///   let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
-///   let normalized_salt = salt.nfkd().to_string();
-///
-///   let seed = get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
-/// 
-///   assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
-/// ```
-///
-fn get_pbkdf2_sha512(password: String, salt: String) -> String {
-  let password = password.as_bytes();
-  let salt = salt.as_bytes();
-
-  let mut seed = [0u8; PBKDF2_DERIVED_KEY_LENGTH_BYTES];
-  pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, PBKDF2_ITERATION_COUNT, &mut seed);
-
-  let seed = format!("{}", hex::encode(seed));
-  println!("{}", seed);
-  seed
-}
-
-/// Helper function to read from a file and return its contents
-/// as a Vec<String>
-///
-/// Example:
-/// ```rust
-///  let wordlist: Vec<String> = match read_from_a_file("./src/wordlist/english.txt".to_owned()) {
-///   Ok(data) => data,
-///   Err(err) => panic!("{}", err),
-///  };
-/// ```
-///
-fn read_from_a_file(path: String) -> std::io::Result<Vec<String>> {
-  let file = File::open(path)?;
-
-  let buf = BufReader::new(file);
-  let lines = buf
-    .lines()
-    .map(|l| l.expect("Could not parse line"))
-    .collect();
-
-  Ok(lines)
 }
