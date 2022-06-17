@@ -126,17 +126,21 @@ fn test_decode_bech32m_address(){
 fn main() {
   let my_wallet = wallet::Wallet {};
   
-  // private key
-  // let (dec_priv_key, sha256_priv_key) = my_wallet.generate_private_key();
-  let dec_priv_key: u128 = 226296091940012619244294630313588417160;
+  // // private key
+  // // let (dec_priv_key, sha256_priv_key) = my_wallet.generate_private_key();
+  // let dec_priv_key: u128 = 226296091940012619244294630313588417160;
   
-  // my_wallet.generate_mnemonic_from_entropy(dec_priv_key.to_be_bytes().to_vec());
-  // my_wallet.generate_mnemonic_from_entropy([0x33, 0xE4, 0x6B, 0xB1, 0x3A, 0x74, 0x6E, 0xA4, 0x1C, 0xDD, 0xE4, 0x5C, 0x90, 0x84, 0x6A, 0x79].to_vec());
-  let mnemonic = match my_wallet.generate_mnemonic_from_entropy([0x0C, 0x1E, 0x24, 0xE5, 0x91, 0x77, 0x79, 0xD2, 0x97, 0xE1, 0x4D, 0x45, 0xF1, 0x4E, 0x1A, 0x1A].to_vec()) {
-    Ok(data) => data,
-    Err(err) => panic!("{}", err),
-  };
+  // // my_wallet.generate_mnemonic_from_entropy(dec_priv_key.to_be_bytes().to_vec());
+  // // my_wallet.generate_mnemonic_from_entropy([0x33, 0xE4, 0x6B, 0xB1, 0x3A, 0x74, 0x6E, 0xA4, 0x1C, 0xDD, 0xE4, 0x5C, 0x90, 0x84, 0x6A, 0x79].to_vec());
+  // let mnemonic = match my_wallet.generate_mnemonic_from_entropy([0x0C, 0x1E, 0x24, 0xE5, 0x91, 0x77, 0x79, 0xD2, 0x97, 0xE1, 0x4D, 0x45, 0xF1, 0x4E, 0x1A, 0x1A].to_vec()) {
+  //   Ok(data) => data,
+  //   Err(err) => panic!("{}", err),
+  // };
 
-  // get seed from mnemonic
-  my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  // // get seed from mnemonic
+  // let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);  
+
+  // get master key
+  let seed = "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned();
+  my_wallet.create_master_keys_from_seed(seed);
 }

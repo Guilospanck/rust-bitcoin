@@ -8,6 +8,8 @@ use sha256::digest;
 use unicode_normalization::UnicodeNormalization;
 use std::result;
 use thiserror::Error;
+use hmac::{Hmac, Mac};
+use sha2::{Sha512};
 
 #[derive(Error, Debug)]
 pub enum WalletError {
@@ -311,5 +313,37 @@ impl Wallet {
     let normalized_salt = salt.nfkd().to_string();
 
     get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt)
+  }
+
+  /// see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+  /// 
+  /// Child derivation from seed:
+  /// From a CSPRNG
+  ///     => `generate_mnemonic_from_entropy()`: Mnemonic
+  ///     => `get_seed_from_mnemonic`: Root Seed (128, 256 or 512 bits)
+  ///     => HMAC-SHA512(Root Seed)
+  ///         -> Left 256 bits: Master Private Key (m) => `get_public_key_from_private_key(m)`: Master Public Key (M) 264 bits
+  ///         -> Right 256 bits: Master Chain Code  
+  /// 
+  /// Then, once you have the m, M and chain code:
+  /// 
+  /// (*) Extending a parent private key to create a child private key:
+  ///   (M || Chain Code || Index number) => HMAC-SHA512 => THEN:
+  ///         -> Left 256 bits: Child Private Key Index 0 (m0) => `get_public_key_from_private_key(m || m0)`: Child Public Key (M) index 0 264 bits
+  ///         -> Right 256 bits: Child Chain Code index 0
+  /// 
+  /// Obs.: a child private key can be used to make a public key and a Bitcoin address. Then, the same child private key
+  /// can be used to sign transactions to spend anything paid to that address.
+  ///         
+  /// 
+  ///     
+  pub fn create_master_keys_from_seed(&self, seed: String) -> () {
+    type HmacSha512 = Hmac<Sha512>;
+    
+    let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(b"Bitcoin seed").expect("Something went wrong with HMAC-Sha512 hashing");
+    seed_as_hmacsha512.update(&seed.into_bytes());
+    let result = seed_as_hmacsha512.finalize();
+  
+    println!("{:x}", result.into_bytes());
   }
 }
