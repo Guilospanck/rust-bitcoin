@@ -283,7 +283,6 @@ pub fn get_pbkdf2_sha512(password: String, salt: String) -> String {
   pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, PBKDF2_ITERATION_COUNT, &mut seed);
 
   let seed = format!("{}", hex::encode(seed));
-  println!("{}", seed);
   seed
 }
 

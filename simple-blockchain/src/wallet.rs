@@ -364,10 +364,12 @@ impl Wallet {
     let master_private_key = &seed_as_sha512[..64]; // left half
     let master_chain_code = &seed_as_sha512[64..]; // right half
 
-    let master_public_key = self.get_public_key_from_private_key(master_private_key.to_owned());
+    let master_public_key = self.get_public_key_from_private_key(master_private_key.to_string());
+
+    println!("m: {}\nM: {}\nMaster chain: {}", master_private_key, master_public_key, master_chain_code);
 
     self.master_keys = MasterKeys {
-      private_key: master_private_key.to_owned(),
+      private_key: master_private_key.to_string(),
       public_key: master_public_key,
       chain_code: master_chain_code.to_owned(),
     }; 
@@ -378,11 +380,11 @@ impl Wallet {
     let mut data: Vec<u8> = Vec::new();
 
     if index < base.pow(31) { // normal keys
-      let public_key = self.get_public_key_from_private_key(private_parent_key);
+      let public_key = self.get_public_key_from_private_key(private_parent_key.clone());
       data.append(&mut public_key.into_bytes());
     } else { // hardened keys
       data.push(0x00);
-      data.append(&mut private_parent_key.into_bytes());
+      data.append(&mut private_parent_key.clone().into_bytes());
     }
     
     data.append(&mut index.to_be_bytes().to_vec());
@@ -390,6 +392,29 @@ impl Wallet {
 
     let child_private_key = &l[..64]; // left half
     let child_chain_code = &l[64..]; // right half    
+
+    let mut sk = secp256k1::SecretKey::from_slice(&hex::decode(child_private_key).unwrap()).unwrap();
+    sk.add_assign(&hex::decode(private_parent_key).unwrap()).unwrap();
+
+    println!("Child Private Key: {}\nChild Main Code: {}", sk.display_secret(), child_chain_code);
+  }
+
+  pub fn ckd_public_parent_to_public_child_key(&self, public_parent_key: String, parent_chain_code: String, index: u32) -> () {
+    let base: u32 = 2;
+    
+    if index > base.pow(31) { // hardened keys
+      println!("Error: K -> K is not defined for hardened keys.");
+      return;
+    }
+    
+    let mut data: Vec<u8> = Vec::new();
+    data.append(&mut public_parent_key.into_bytes());    
+    data.append(&mut index.to_be_bytes().to_vec());
+
+    let l = hmac_sha512_hasher(parent_chain_code, data);
+
+    let child_public_key = &l[..64]; // left half
+    let child_chain_code = &l[64..]; // right half
   }
 
   
