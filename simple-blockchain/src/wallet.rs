@@ -30,6 +30,12 @@ type Result<T> = result::Result<T, WalletError>;
 const MNEMONIC_STRING: &str = "mnemonic";
 const HMAC_SHA512_KEY: &str = "Bitcoin seed";
 
+pub struct MasterKeys {
+  private_key: String,
+  public_key: String,
+  chain_code: String,
+}
+
 /// A wallet contains our addresses and keys.
 ///
 /// From a private key (k) - usually picked up at random - we derive,
@@ -334,9 +340,18 @@ impl Wallet {
   /// Obs.: a child private key can be used to make a public key and a Bitcoin address. Then, the same child private key
   /// can be used to sign transactions to spend anything paid to that address.
   ///         
-  /// 
-  ///     
-  pub fn create_master_keys_from_seed(&self, seed: String) -> () {
-    
+  ///    
+  pub fn create_master_keys_from_seed(&self, seed: String) -> MasterKeys {
+    let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.to_owned(), seed);
+    let master_private_key = &seed_as_sha512[..64]; // left half
+    let master_chain_code = &seed_as_sha512[64..]; // right half
+
+    let master_public_key = self.get_public_key_from_private_key(master_private_key.to_owned());
+
+    MasterKeys {
+      private_key: master_private_key.to_owned(),
+      public_key: master_public_key,
+      chain_code: master_chain_code.to_owned(),
+    }    
   }
 }
