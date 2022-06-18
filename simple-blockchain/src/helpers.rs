@@ -209,12 +209,12 @@ pub fn ripemd160_hasher(data: String) -> String {
 /// Gets the HMAC-SHA512 one way hashing representation of 
 /// some data using a some key.
 /// It returns the representation in hexadecimal format.
-pub fn hmac_sha512_hasher(key: String, data: String) -> String {
+pub fn hmac_sha512_hasher(key: String, data: Vec<u8>) -> String {
   type HmacSha512 = Hmac<Sha512>;
 
   let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(&key.into_bytes())
     .expect("Something went wrong with HMAC-Sha512 hashing");
-  seed_as_hmacsha512.update(&data.into_bytes());
+  seed_as_hmacsha512.update(&data);
   let result = seed_as_hmacsha512.finalize();
 
   format!("{:x}", result.into_bytes())

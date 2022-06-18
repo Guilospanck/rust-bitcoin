@@ -30,12 +30,6 @@ type Result<T> = result::Result<T, WalletError>;
 const MNEMONIC_STRING: &str = "mnemonic";
 const HMAC_SHA512_KEY: &str = "Bitcoin seed";
 
-pub struct MasterKeys {
-  private_key: String,
-  public_key: String,
-  chain_code: String,
-}
-
 /// A wallet contains our addresses and keys.
 ///
 /// From a private key (k) - usually picked up at random - we derive,
@@ -51,9 +45,35 @@ pub struct MasterKeys {
 ///
 ///
 #[derive(Debug)]
-pub struct Wallet {}
+pub struct Wallet {
+  master_keys: MasterKeys
+}
+
+#[derive(Debug)]
+pub struct MasterKeys {
+  private_key: String,
+  public_key: String,
+  chain_code: String,
+}
+
+impl MasterKeys {
+  pub fn new() -> Self {
+    MasterKeys {
+      private_key: "".to_owned(),
+      public_key: "".to_owned(),
+      chain_code: "".to_owned(),
+    }
+  }
+}
 
 impl Wallet {
+  pub fn new() -> Self {
+    let master_keys = MasterKeys::new();
+    Wallet {
+      master_keys
+    }
+  }
+
   /// Generates a private key from a CSPRNG (cryptographically-secure pseudo-random number
   /// generator) entropy and returns the decimal and SHA256 representation of it.
   ///
@@ -114,8 +134,6 @@ impl Wallet {
     let secret_key =
       SecretKey::from_slice(&private_key_bytes).expect("32 bytes, within curve order");
     let public_key = PublicKey::from_secret_key(&secp, &secret_key);
-
-    println!("Public key (K): {}", public_key);
 
     public_key.to_string()
   }
@@ -341,17 +359,39 @@ impl Wallet {
   /// can be used to sign transactions to spend anything paid to that address.
   ///         
   ///    
-  pub fn create_master_keys_from_seed(&self, seed: String) -> MasterKeys {
-    let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.to_owned(), seed);
+  pub fn create_master_keys_from_seed(&mut self, seed: String) -> () {
+    let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.to_owned(), seed.into_bytes());
     let master_private_key = &seed_as_sha512[..64]; // left half
     let master_chain_code = &seed_as_sha512[64..]; // right half
 
     let master_public_key = self.get_public_key_from_private_key(master_private_key.to_owned());
 
-    MasterKeys {
+    self.master_keys = MasterKeys {
       private_key: master_private_key.to_owned(),
       public_key: master_public_key,
       chain_code: master_chain_code.to_owned(),
-    }    
+    }; 
   }
+
+  pub fn ckd_private_parent_to_private_child_key(&self, private_parent_key: String, parent_chain_code: String, index: u32) -> () {
+    let base: u32 = 2;
+    let mut data: Vec<u8> = Vec::new();
+
+    if index < base.pow(31) { // normal keys
+      let public_key = self.get_public_key_from_private_key(private_parent_key);
+      data.append(&mut public_key.into_bytes());
+    } else { // hardened keys
+      data.push(0x00);
+      data.append(&mut private_parent_key.into_bytes());
+    }
+    
+    data.append(&mut index.to_be_bytes().to_vec());
+    let l = hmac_sha512_hasher(parent_chain_code, data);
+
+    let child_private_key = &l[..64]; // left half
+    let child_chain_code = &l[64..]; // right half    
+  }
+
+  
+
 }
