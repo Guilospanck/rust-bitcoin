@@ -1,12 +1,12 @@
 use chrono::prelude::*;
-use num_bigint::{BigInt, Sign, BigUint};
+use hmac::{Hmac, Mac};
 use num::pow::pow;
-use sha256::digest;
+use num_bigint::{BigInt, BigUint, Sign};
 use ripemd::{Digest, Ripemd160};
+use sha2::Sha512;
+use sha256::digest;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
-use hmac::Hmac;
-use sha2::Sha512;
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -43,7 +43,7 @@ const PBKDF2_DERIVED_KEY_LENGTH_BYTES: usize = 64;
 /// let genesis_target = get_target_representation(486604799);
 /// println!("{:?}", genesis_target); // 00000000ffff0000000000000000000000000000000000000000000000000000
 /// ```
-/// 
+///
 pub fn get_target_representation(bits: u32) -> String {
   let hex_representation = format!("{:x}", bits); // 1d00ffff
   let exponent = &hex_representation[..2]; // 1d
@@ -87,7 +87,7 @@ pub fn get_target_representation(bits: u32) -> String {
 /// let merkle_root = get_transactions_merkle_root(&mut transactions);
 /// println!("{}", merkle_root); // dab0bcbdb46f816630e838a4588c07b313f6ee21f501ca4f497718e63ead6855
 /// ```
-/// 
+///
 pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> String {
   if transactions.len() == 0 {
     return "".to_owned();
@@ -119,7 +119,7 @@ pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> Stri
 
 /// let merkle_root = build_merkle_root(hashed_transactions);
 /// ```
-/// 
+///
 pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
   if hashed_transactions.is_empty() {
     return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_owned();
@@ -158,14 +158,14 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 }
 
 /// This is a basic proof of work algorithm.
-/// It receives a mutable `BlockHeader`, gets the 
+/// It receives a mutable `BlockHeader`, gets the
 /// target representation of the `bits` (see `get_target_representation()`) and
 /// finally loops through all nonces (0 - MAX_NONCE), sha256 hashing the result
 /// and comparing if it is less than or equal to the bits.
-/// 
+///
 /// When the whole nonce spectrum is used and a valid hash wasn't found, it then
 /// updates the block timestamp and tries again.
-/// 
+///
 pub fn mine_block(block_header: &mut BlockHeader) -> () {
   let target = get_target_representation(block_header.bits);
   let target_as_bytes = hex::decode(&target).unwrap();
@@ -196,7 +196,7 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 /// Gets the RIPEMD160 representation of a string.
 /// On Bitcoin it's used for generating address from a Public Key (K), like
 /// `RIPEMD160(SHA256(K))`
-/// 
+///
 pub fn ripemd160_hasher(data: String) -> String {
   let mut hasher = Ripemd160::new();
   hasher.update(data);
@@ -205,11 +205,26 @@ pub fn ripemd160_hasher(data: String) -> String {
   format!("{:x}", result)
 }
 
+
+/// Gets the HMAC-SHA512 one way hashing representation of 
+/// some data using a some key.
+/// It returns the representation in hexadecimal format.
+pub fn hmac_sha512_hasher(key: String, data: String) -> String {
+  type HmacSha512 = Hmac<Sha512>;
+
+  let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(&key.into_bytes())
+    .expect("Something went wrong with HMAC-Sha512 hashing");
+  seed_as_hmacsha512.update(&data.into_bytes());
+  let result = seed_as_hmacsha512.finalize();
+
+  format!("{:x}", result.into_bytes())
+}
+
 /// Converts a vector of bytes from a representation to another.
-/// 
-/// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#segwit-address-format 
+///
+/// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#segwit-address-format
 /// for more information in how it does the calculation.
-/// 
+///
 pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
   let mut bits = String::new();
   for byte in data_bytes {
@@ -246,9 +261,9 @@ pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
 ///   use unicode_normalization::UnicodeNormalization;
 ///
 ///   const MNEMONIC_STRING: &str = "mnemonic";
-/// 
+///
 ///   let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
-/// 
+///
 ///   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
 ///   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
 ///
@@ -256,7 +271,7 @@ pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
 ///   let normalized_salt = salt.nfkd().to_string();
 ///
 ///   let seed = get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
-/// 
+///
 ///   assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
 /// ```
 ///

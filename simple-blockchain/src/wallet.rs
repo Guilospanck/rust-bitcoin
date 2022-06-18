@@ -1,5 +1,5 @@
 use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
-use crate::helpers::{convert_bits, ripemd160_hasher, read_from_a_file_to_a_vec_string, get_pbkdf2_sha512};
+use crate::helpers::{convert_bits, ripemd160_hasher, read_from_a_file_to_a_vec_string, get_pbkdf2_sha512, hmac_sha512_hasher};
 use hex;
 use num_bigint::{BigInt, Sign};
 use rand::prelude::*;
@@ -8,8 +8,6 @@ use sha256::digest;
 use unicode_normalization::UnicodeNormalization;
 use std::result;
 use thiserror::Error;
-use hmac::{Hmac, Mac};
-use sha2::{Sha512};
 
 #[derive(Error, Debug)]
 pub enum WalletError {
@@ -30,6 +28,7 @@ pub enum WalletError {
 type Result<T> = result::Result<T, WalletError>;
 
 const MNEMONIC_STRING: &str = "mnemonic";
+const HMAC_SHA512_KEY: &str = "Bitcoin seed";
 
 /// A wallet contains our addresses and keys.
 ///
@@ -338,12 +337,6 @@ impl Wallet {
   /// 
   ///     
   pub fn create_master_keys_from_seed(&self, seed: String) -> () {
-    type HmacSha512 = Hmac<Sha512>;
     
-    let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(b"Bitcoin seed").expect("Something went wrong with HMAC-Sha512 hashing");
-    seed_as_hmacsha512.update(&seed.into_bytes());
-    let result = seed_as_hmacsha512.finalize();
-  
-    println!("{:x}", result.into_bytes());
   }
 }
