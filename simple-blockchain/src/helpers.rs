@@ -205,14 +205,22 @@ pub fn ripemd160_hasher(data: String) -> String {
   format!("{:x}", result)
 }
 
+/// Gets the HASH160 (`RIPEMD160(SHA256(K))`) of some data and returns its
+/// hashed data in the hex format.
+pub fn get_hash160(data: String) -> String {
+  let hashed_256 = digest(&data);
+  let ripemd160_hashed = ripemd160_hasher(hashed_256);
+
+  ripemd160_hashed
+}
 
 /// Gets the HMAC-SHA512 one way hashing representation of 
 /// some data using a some key.
-/// It returns the representation in hexadecimal format.
-pub fn hmac_sha512_hasher(key: String, data: Vec<u8>) -> String {
+/// It returns the representation in a string hexadecimal format.
+pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
   type HmacSha512 = Hmac<Sha512>;
 
-  let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(&key.into_bytes())
+  let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(&key)
     .expect("Something went wrong with HMAC-Sha512 hashing");
   seed_as_hmacsha512.update(&data);
   let result = seed_as_hmacsha512.finalize();

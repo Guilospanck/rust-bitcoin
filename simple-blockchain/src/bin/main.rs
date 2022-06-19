@@ -96,8 +96,10 @@ fn test_merkle_root() {
 fn test_generate_bech32m_address() {
   let my_wallet = wallet::Wallet::new();
   let (_dec_private_key, sha256_dec_private_key) = my_wallet.generate_private_key();
-  let public_key = my_wallet.get_public_key_from_private_key(sha256_dec_private_key);
-  my_wallet.generate_bech32m_address_from_public_key(public_key);
+  let private_key_bytes = hex::decode(&sha256_dec_private_key).unwrap();
+
+  let public_key = my_wallet.get_public_key_from_private_key(private_key_bytes);
+  my_wallet.generate_bech32m_address_from_public_key(hex::encode(public_key));
 }
 
 fn test_encode_bech32m_address() {
@@ -126,17 +128,22 @@ fn test_decode_bech32m_address(){
 fn main() {
   let mut my_wallet = wallet::Wallet::new();
 
-  let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
-  let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  // let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
+  // let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
   println!("Seed: {}", seed);
 
-  my_wallet.create_master_keys_from_seed(seed);
+  my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
 
-  let master_private_key = "30b8d7a4ef9f3056a67571c0b21d9559e6ca3304e3e385aaab6e85ac5f60af39".to_owned();
-  let master_public_key = "0230731e63f542716ca79abf07c60e1d260dabfb23feae87e7b547daeafe4ef63a".to_owned();
-  let master_chain_code = "990a949d96837652be6a3d626ab5d14926203a24a5dc42383f3b201dcf9deb5d".to_owned();
+  let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
+  let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+  let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
+
+  let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+  let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
 
   println!();
 
-  my_wallet.ckd_private_parent_to_private_child_key(master_private_key, master_chain_code, 0)
+  my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 0);
+
 }
