@@ -111,9 +111,9 @@ impl ExtendedPrivateKey {
 #[derive(Debug, Default)]
 pub struct Wallet {
   /// Master keys derived from seed
-  master_keys: MasterKeys,
+  pub master_keys: MasterKeys,
   /// How many derivations this key is from the master node (master is 0)
-  depth: u8,
+  pub depth: u8,
 }
 
 #[derive(Debug, Default)]
@@ -145,10 +145,11 @@ impl Wallet {
   /// This number must be less than a constant `(n = 1.158*10^77, which is slightly less than 2^256)`,
   /// in order to be able to derive it from a ECC curve.
   ///
+  /// ---
   /// Example:
   /// ```rust
-  /// let wallet = Wallet{};
-  /// let k = wallet.generate_private_key();
+  /// let wallet = Wallet::new();
+  /// let (dec_private_key, sha256_dec_private_key) = wallet.generate_private_key();
   /// ```
   ///
   pub fn generate_private_key(&self) -> (u128, String) {
@@ -181,16 +182,17 @@ impl Wallet {
   /// The `private_key` argument is the SHA256 representation of it.
   /// Returns a hexadecimal string representing the Public Key.
   ///
+  /// ---
   /// Example:
   /// ```rust
-  /// let wallet = Wallet{};
-  /// let k = wallet.generate_private_key();
-  /// let K = wallet.get_public_key_from_private_key(k);
+  /// let wallet = Wallet::new();
+  /// let (_dec_private_key, sha256_dec_private_key) = wallet.generate_private_key();
+  /// let K = wallet.get_public_key_from_private_key(hex::decode(&sha256_dec_private_key).unwrap());
   ///
   /// // tests
   /// let k = "e1b4519c66558ec215c55392290afc35f249e113c803bfcadf3b066b4f87d2f3".to_owned();
-  /// let K = wallet.get_public_key_from_private_key(k);
-  /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
+  /// let K = wallet.get_public_key_from_private_key(hex::decode(&k).unwrap());
+  /// assert_eq!(hex::encode(K), "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
   /// ```
   ///
   pub fn get_public_key_from_private_key(&self, private_key: Vec<u8>) -> Vec<u8> {
@@ -207,9 +209,10 @@ impl Wallet {
   /// Base32 format and then retrieve its representation in Bech32m style
   /// for the Bitcoin mainnet (bc).
   ///
+  /// ---
   /// Example:
   /// ```rust
-  /// let wallet = Wallet{};
+  /// let wallet = Wallet::new();
   /// let k = wallet.generate_private_key();
   /// let K = wallet.get_public_key_from_private_key(k);
   /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K);
@@ -218,7 +221,7 @@ impl Wallet {
   /// let k = "e1b4519c66558ec215c55392290afc35f249e113c803bfcadf3b066b4f87d2f3".to_owned();
   /// let K = wallet.get_public_key_from_private_key(k);
   /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
-  /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K);
+  /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K)?;
   /// assert_eq!(bech32m_address, "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
   /// ```
   ///
@@ -252,7 +255,7 @@ impl Wallet {
   ///
   /// Example:
   /// ```rust
-  /// let wallet = Wallet{};
+  /// let wallet = Wallet::new();
   /// let bech32_address = "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned();
   /// let bech32_decoded = wallet.get_info_from_bech32m_address(bech32_address);
   ///
@@ -297,6 +300,7 @@ impl Wallet {
   /// |  256  |  8 |   264  |  24  |
   /// ```
   ///
+  /// ---
   /// Example:
   /// ```rust
   /// let my_wallet = wallet::Wallet {};
@@ -375,6 +379,7 @@ impl Wallet {
   ///
   /// The seed is an 512 bits hexadecimal string.
   ///
+  /// ---
   /// Example:
   /// ```rust
   /// let my_wallet = wallet::Wallet {};
@@ -404,16 +409,28 @@ impl Wallet {
     get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt)
   }
 
+  /// Derives Master Keys from the Seed.
   /// see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
   ///
   /// Child derivation from seed:
+  /// ```
   /// From a CSPRNG
-  ///     => `generate_mnemonic_from_entropy()`: Mnemonic
-  ///     => `get_seed_from_mnemonic`: Root Seed (128, 256 or 512 bits)
+  ///     => generate_mnemonic_from_entropy(): Mnemonic
+  ///     => get_seed_from_mnemonic: Root Seed (128, 256 or 512 bits)
   ///     => HMAC-SHA512(Root Seed)
-  ///         -> Left 256 bits: Master Private Key (m) => `get_public_key_from_private_key(m)`: Master Public Key (M) 264 bits
+  ///         -> Left 256 bits: Master Private Key (m) => get_public_key_from_private_key(m): Master Public Key (M) 264 bits
   ///         -> Right 256 bits: Master Chain Code  
-  ///    
+  /// ```
+  /// 
+  /// ---
+  /// Example:
+  /// ```rust
+  /// let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
+  /// my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
+  /// 
+  /// assert_eq!(my_wallet.master_keys, MasterKeys { private_key: "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e", public_key: "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7", chain_code: "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689" });
+  /// ```
+  /// 
   pub fn create_master_keys_from_seed(&mut self, seed: Vec<u8>) -> () {
     let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.as_bytes().to_vec(), seed);
     
@@ -481,6 +498,25 @@ impl Wallet {
   /// `Obs.:` a child private key can be used to make a public key and a Bitcoin address. Then, the same child private key
   /// can be used to sign transactions to spend anything paid to that address.
   /// 
+  /// ----
+  /// `Example:`
+  /// 
+  /// ```rust
+  /// let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
+  /// let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
+
+  /// let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+  /// let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
+  /// 
+  /// // Chain m/0
+  /// my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 0);
+  /// 
+  /// assert_eq!(child_public_key, "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
+  /// assert_eq!(child_private_key, "abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
+  /// assert_eq!(child_chain_code, "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c");
+  /// assert_eq!(zprv, "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
+  /// ```
+  ///
   pub fn ckd_private_parent_to_private_child_key(
     &self,
     private_parent_key: Vec<u8>,
@@ -527,7 +563,7 @@ impl Wallet {
     };
 
     println!(
-      "Child Public Key: {}\nChild Private Key: {}\nChild Main Code: {}",
+      "Child Public Key: {}\nChild Private Key: {}\nChild Chain Code: {}",
       hex::encode(self.get_public_key_from_private_key(hex::decode(&child_private_key).unwrap())),
       sk.display_secret(),
       child_chain_code
@@ -552,6 +588,24 @@ impl Wallet {
   ///     => Child Public Key Index 0 (M/0): (left 256 bits + M), where + is a EC group operation.
   ///   - Right 256 bits: Child Chain Code index 0
   ///```
+  /// 
+  /// ----
+  /// `Example:`
+  /// 
+  /// ```rust
+  /// let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+  /// let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
+  /// 
+  /// let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
+  /// let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
+  /// 
+  /// // Chain M/0
+  /// my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
+  /// 
+  /// assert_eq!(child_public_key, "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
+  /// assert_eq!(child_chain_code, "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c");
+  /// assert_eq!(zpub, "04b2474601bd16bee50000000060499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd968902fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
+  /// ```
   /// 
   pub fn ckd_public_parent_to_public_child_key(
     &self,
@@ -581,10 +635,15 @@ impl Wallet {
 
     // EC group operation to get the child public key
     // child public key = left_hmac_sha512 + parent_public_key
+    // Gets left 256 bits of the HMAC-SHA512 as Public Key
     let secp = Secp256k1::new();
     let sk = secp256k1::SecretKey::from_slice(&left_hmac_sha512).unwrap();
     let mut child_public_key = PublicKey::from_secret_key(&secp, &sk);
+
+    // Get the parent public key as Public Key (Struct from secp256k1 lib)
     let parent_public_key_as_pk = PublicKey::from_slice(&public_parent_key).unwrap();
+
+    // combine (+) the two public keys
     child_public_key = child_public_key.combine(&parent_public_key_as_pk).unwrap();
 
     // Extended public key
@@ -605,6 +664,19 @@ impl Wallet {
     println!("zpub: {}", hex::encode(extended_public_key.encode()));
   }  
 
+  /// Gets the Fingerprint of the public key. It accepts a hex encoded public key.
+  /// 
+  /// The Fingerprint is defined as the first 32 bits of the `HASH160(public_key)` result.
+  /// 
+  /// ---
+  /// Example:
+  /// ```rust  /// 
+  /// let public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+  /// let fingerprint = my_wallet.get_fingerprint(public_key);
+  /// 
+  /// assert_eq!(fingerprint, [189, 22, 190, 229]);
+  /// ```
+  /// 
   fn get_fingerprint(&self, public_key: String) -> Vec<u8>{
     let hash160 = get_hash160(public_key);
     hex::decode(&hash160).unwrap()[..4].to_vec() // fingerprint is the first 32 bits
