@@ -133,10 +133,10 @@ fn main() {
   // let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
 
   // BIP 32 test vector 1
-  let seed = "000102030405060708090a0b0c0d0e0f".to_owned();
+  // let seed = "000102030405060708090a0b0c0d0e0f".to_owned();
 
   // BIP 32 test vector 2
-  // let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
+  let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
 
   println!("\nSeed: {}", seed);
 
@@ -151,27 +151,39 @@ fn main() {
   // let master_chain_code = "7923408dadd3c7b56eed15567707ae5e5dca089de972e07f3b860450e2a3b70e".to_owned();
 
   // BIP 32 test vector 1
-  let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
-  let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
-  let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
+  // let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
+  // let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
+  // let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
 
   // BIP 32 test vector 2
-  // let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
-  // let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
-  // let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
+  let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
+  let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+  let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
 
   let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+  let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
   let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
-
-  println!();
   
+  // =========== private parent key -> private child key derivation =================
+  println!();
+
   // println!("Chain m/84':");
   // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 2_147_483_732);
 
-  // println!("Chain m/0:");
-  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 0);
+  println!("Chain m/0:");
+  my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 0);
 
-  println!("Chain m/0':");
-  my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 2_147_483_648); // 2^31
+  // println!("Chain m/0':");
+  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 2_147_483_648); // 2^31
 
+  
+  // =========== public parent key -> public child key derivation =================
+  println!();
+
+  // error because K -> K not defined for hardened keys
+  // println!("Chain M/0':");
+  // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 2_147_483_648); // 2^31
+
+  println!("Chain M/0:");
+  my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
 }

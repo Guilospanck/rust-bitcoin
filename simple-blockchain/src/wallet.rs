@@ -32,7 +32,36 @@ type Result<T> = result::Result<T, WalletError>;
 
 const MNEMONIC_STRING: &str = "mnemonic";
 const HMAC_SHA512_KEY: &str = "Bitcoin seed";
-const MAINNET_BTC_ZPRV: &[u8] = &[0x04, 0xb2, 0x43, 0x0c];
+const MAINNET_BTC_BIP84_ZPRV: &[u8] = &[0x04, 0xb2, 0x43, 0x0c];
+const MAINNET_BTC_BIP84_ZPUB: &[u8] = &[0x04, 0xb2, 0x47, 0x46];
+
+pub struct ExtendedPublicKey {
+  /// Current chain code
+  chain_code: Vec<u8>,
+  /// Public key to be extended
+  key: Vec<u8>,
+  /// How many derivations this key is from the master node (master is 0)
+  depth: u8,
+  /// Fingerprint of the parent public key (0 for master)
+  parent_key_fingerprint: Vec<u8>,
+  /// Child number of the key used to derive from parent - index. (0 for master)
+  child_number: u32
+}
+
+impl ExtendedPublicKey {
+  pub fn encode(&self) -> [u8; 78] {
+    let mut ret = [0; 78];
+
+    ret[0..4].copy_from_slice(MAINNET_BTC_BIP84_ZPUB); // BTC mainnet BIP 84 zprv 0x04b24746 (4 bytes)
+    ret[4] = self.depth; // depth (1 byte)
+    ret[5..9].copy_from_slice(&self.parent_key_fingerprint); // fingerprint of the parent's public key (0x00000000 if master key) (4 bytes)
+    ret[9..13].copy_from_slice(&u32::to_be_bytes(self.child_number)); // child number (0x00000000 if master key) (4 bytes)
+    ret[13..45].copy_from_slice(&self.chain_code); // chain code  32 bytes
+    ret[45..78].copy_from_slice(&self.key); // public key 33 bytes
+
+    ret
+  }
+}
 
 pub struct ExtendedPrivateKey {
   /// Current chain code
@@ -41,8 +70,8 @@ pub struct ExtendedPrivateKey {
   key: Vec<u8>,
   /// How many derivations this key is from the master node (master is 0)
   depth: u8,
-  /// Fingerprint of the parent key (0 for master)
-  parents_key_fingerprint: Vec<u8>,
+  /// Fingerprint of the parent public key (0 for master)
+  parent_key_fingerprint: Vec<u8>,
   /// Child number of the key used to derive from parent - index. (0 for master)
   child_number: u32
 }
@@ -53,9 +82,9 @@ impl ExtendedPrivateKey {
   pub fn encode(&self) -> [u8; 78] {
     let mut ret = [0; 78];
 
-    ret[0..4].copy_from_slice(MAINNET_BTC_ZPRV); // BTC mainnet BIP 84 zprv 0x04b2430c (4 bytes)
+    ret[0..4].copy_from_slice(MAINNET_BTC_BIP84_ZPRV); // BTC mainnet BIP 84 zprv 0x04b2430c (4 bytes)
     ret[4] = self.depth; // depth (1 byte)
-    ret[5..9].copy_from_slice(&self.parents_key_fingerprint); // fingerprint of the parent's key (0x00000000 if master key) (4 bytes)
+    ret[5..9].copy_from_slice(&self.parent_key_fingerprint); // fingerprint of the parent's key (0x00000000 if master key) (4 bytes)
     ret[9..13].copy_from_slice(&u32::to_be_bytes(self.child_number)); // child number (0x00000000 if master key) (4 bytes)
     ret[13..45].copy_from_slice(&self.chain_code); // chain code  32 bytes
     ret[45] = 0x00; // 1 byte add because of private key
@@ -384,17 +413,6 @@ impl Wallet {
   ///     => HMAC-SHA512(Root Seed)
   ///         -> Left 256 bits: Master Private Key (m) => `get_public_key_from_private_key(m)`: Master Public Key (M) 264 bits
   ///         -> Right 256 bits: Master Chain Code  
-  ///
-  /// Then, once you have the m, M and chain code:
-  ///
-  /// (*) Extending a parent private key to create a child private key:
-  ///   (M || Chain Code || Index number) => HMAC-SHA512 => THEN:
-  ///         -> Left 256 bits: Child Private Key Index 0 (m0) => `get_public_key_from_private_key(m || m0)`: Child Public Key (M) index 0 264 bits
-  ///         -> Right 256 bits: Child Chain Code index 0
-  ///
-  /// Obs.: a child private key can be used to make a public key and a Bitcoin address. Then, the same child private key
-  /// can be used to sign transactions to spend anything paid to that address.
-  ///         
   ///    
   pub fn create_master_keys_from_seed(&mut self, seed: Vec<u8>) -> () {
     let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.as_bytes().to_vec(), seed);
@@ -413,16 +431,27 @@ impl Wallet {
       master_chain_code
     );
 
+    // Extended public key
+    let extended_public_key = ExtendedPublicKey {
+      chain_code: hex::decode(&master_chain_code).unwrap(),
+      key: master_public_key.clone(),
+      depth: self.depth,
+      parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
+      child_number: 0
+    };
+
+    println!("zpub: {}", hex::encode(extended_public_key.encode()));
+
     // Extended private key
     let extended_private_key = ExtendedPrivateKey {
       chain_code: hex::decode(&master_chain_code).unwrap(),
       key: hex::decode(&master_private_key).unwrap(),
       depth: self.depth,
-      parents_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
+      parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
       child_number: 0
     };
 
-    println!("zprv: {}", hex::encode(extended_private_key.encode()));
+    println!("zprv: {}", hex::encode(extended_private_key.encode()));    
 
     self.master_keys = MasterKeys {
       private_key: master_private_key.to_string(),
@@ -431,6 +460,27 @@ impl Wallet {
     };
   }
 
+  /// Child Key Derivation (CKD): Parent Private Key to Child Private Key.
+  /// See: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#private-parent-key--private-child-key
+  /// 
+  /// Once you have the m, M and chain code (master keys):
+  ///```
+  /// If normal key (index < 2^31):
+  ///   - key: parent chain code;
+  ///   - data: (M || Index number)
+  ///   => Then HMAC-SHA512(key, data)
+  /// If hardened keys (index >= 2^31)
+  ///   - key: parent chain code;
+  ///   - data: (0x00 || m || Index number)
+  ///   => Then HMAC-SHA512(key, data)
+  /// THEN:
+  ///   - Left 256 bits: 
+  ///     => Child Private Key Index 0 (m/0): (left 256 bits + m), where + is a EC group operation.
+  ///   - Right 256 bits: Child Chain Code index 0
+  ///```
+  /// `Obs.:` a child private key can be used to make a public key and a Bitcoin address. Then, the same child private key
+  /// can be used to sign transactions to spend anything paid to that address.
+  /// 
   pub fn ckd_private_parent_to_private_child_key(
     &self,
     private_parent_key: Vec<u8>,
@@ -439,11 +489,13 @@ impl Wallet {
   ) -> () {
     let base: u32 = 2;
     let mut data: Vec<u8> = Vec::new();
+    
+    let parent_public_key = self.get_public_key_from_private_key(private_parent_key.clone());
 
+    // gets data information
     if index < base.pow(31) {
       // normal keys
-      let public_key = self.get_public_key_from_private_key(private_parent_key.clone());
-      data.append(&mut public_key.clone());
+      data.append(&mut parent_public_key.clone());
     } else {
       // hardened keys
       data.push(0x00);
@@ -451,25 +503,32 @@ impl Wallet {
     }
     data.append(&mut index.to_be_bytes().to_vec());
 
+    // hmac-sha512 using parent chain code as key
     let l = hmac_sha512_hasher(parent_chain_code, data);
+
+    // gets left and right halves of the result
     let left_hmac_sha512 = &l[..64]; // left half
     let left_hmac_sha512 = hex::decode(left_hmac_sha512).unwrap();
     let child_chain_code = &l[64..]; // right half
 
+    // EC group operation to get the child private key
+    // child private key = left_hmac_sha512 + parent_private_key
     let mut sk = secp256k1::SecretKey::from_slice(&left_hmac_sha512).unwrap();
     sk.add_assign(&private_parent_key).unwrap();
     let child_private_key = sk.display_secret().to_string();
 
+    // gets extended private key
     let extended_private_key = ExtendedPrivateKey {
       chain_code: hex::decode(&child_chain_code).unwrap(),
       key: hex::decode(&child_private_key).unwrap(),
       depth: self.depth+1, // TODO: change
-      parents_key_fingerprint: self.get_fingerprint(self.master_keys.public_key.clone()),
+      parent_key_fingerprint: self.get_fingerprint(hex::encode(&parent_public_key)),
       child_number: index
     };
 
     println!(
-      "Child Private Key: {}\nChild Main Code: {}",
+      "Child Public Key: {}\nChild Private Key: {}\nChild Main Code: {}",
+      hex::encode(self.get_public_key_from_private_key(hex::decode(&child_private_key).unwrap())),
       sk.display_secret(),
       child_chain_code
     );
@@ -477,6 +536,23 @@ impl Wallet {
     println!("zprv: {}", hex::encode(extended_private_key.encode()));
   }
 
+  /// Child Key Derivation (CKD): Parent Public Key to Child Public Key.
+  /// See: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#public-parent-key--public-child-key
+  /// 
+  /// Once you have the m, M and chain code (master keys):
+  ///```
+  /// If normal key (index < 2^31):
+  ///   - key: parent chain code;
+  ///   - data: (M || Index number)
+  ///   => Then HMAC-SHA512(key, data)
+  /// If hardened keys (index >= 2^31)
+  ///   - returns failure.
+  /// THEN:
+  ///   - Left 256 bits: 
+  ///     => Child Public Key Index 0 (M/0): (left 256 bits + M), where + is a EC group operation.
+  ///   - Right 256 bits: Child Chain Code index 0
+  ///```
+  /// 
   pub fn ckd_public_parent_to_public_child_key(
     &self,
     public_parent_key: Vec<u8>,
@@ -485,19 +561,48 @@ impl Wallet {
   ) -> () {
     let base: u32 = 2;
 
-    if index > base.pow(31) {
+    if index >= base.pow(31) {
       // hardened keys
       println!("Error: K -> K is not defined for hardened keys.");
       return;
     }
+
+    // gets data
     let mut data: Vec<u8> = Vec::new();
     data.append(&mut public_parent_key.clone());
     data.append(&mut index.to_be_bytes().to_vec());
 
-    let l = hmac_sha512_hasher(parent_chain_code, data);
+    // hmac-sha512 using parent chain code as key
+    let l = hmac_sha512_hasher(parent_chain_code.clone(), data);
 
-    let child_public_key = &l[..64]; // left half
+    let left_hmac_sha512 = &l[..64]; // left half
+    let left_hmac_sha512 = hex::decode(&left_hmac_sha512).unwrap();
     let child_chain_code = &l[64..]; // right half
+
+    // EC group operation to get the child public key
+    // child public key = left_hmac_sha512 + parent_public_key
+    let secp = Secp256k1::new();
+    let sk = secp256k1::SecretKey::from_slice(&left_hmac_sha512).unwrap();
+    let mut child_public_key = PublicKey::from_secret_key(&secp, &sk);
+    let parent_public_key_as_pk = PublicKey::from_slice(&public_parent_key).unwrap();
+    child_public_key = child_public_key.combine(&parent_public_key_as_pk).unwrap();
+
+    // Extended public key
+    let extended_public_key = ExtendedPublicKey {
+      chain_code: parent_chain_code,
+      key: child_public_key.clone().serialize().to_vec(),
+      depth: self.depth + 1, // TODO: CHANGE
+      parent_key_fingerprint: self.get_fingerprint(hex::encode(&public_parent_key)),
+      child_number: index
+    };
+    
+    println!(
+      "Child Public Key: {:x}\nChild Main Code: {}",
+      child_public_key,
+      child_chain_code
+    );
+
+    println!("zpub: {}", hex::encode(extended_public_key.encode()));
   }  
 
   fn get_fingerprint(&self, public_key: String) -> Vec<u8>{
