@@ -167,9 +167,9 @@ impl Wallet {
   pub fn get_public_key_from_private_key(&self, private_key: Vec<u8>) -> Vec<u8> {
     let secp = Secp256k1::new();
     let secret_key = SecretKey::from_slice(&private_key).expect("32 bytes, within curve order");
-    let public_key = PublicKey::from_secret_key(&secp, &secret_key).serialize();
+    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
 
-    public_key.to_vec()
+    public_key.serialize().to_vec()
   }
 
   /// Generates a Bech32m address from a Public Key (K).
@@ -407,7 +407,7 @@ impl Wallet {
     let master_chain_code = &seed_as_sha512[64..]; // right half
 
     println!(
-      "m: {}\nM: {}\nMaster chain: {}",
+      "m: {}\nM: {}\nMaster chain code: {}",
       master_private_key,
       hex::encode(master_public_key.clone()),
       master_chain_code
@@ -422,7 +422,7 @@ impl Wallet {
       child_number: 0
     };
 
-    println!("Chain m. zprv: {}", hex::encode(extended_private_key.encode()));
+    println!("zprv: {}", hex::encode(extended_private_key.encode()));
 
     self.master_keys = MasterKeys {
       private_key: master_private_key.to_string(),
@@ -468,13 +468,13 @@ impl Wallet {
       child_number: index
     };
 
-    println!("zprv: {}", hex::encode(extended_private_key.encode()));
-
     println!(
       "Child Private Key: {}\nChild Main Code: {}",
       sk.display_secret(),
       child_chain_code
     );
+    
+    println!("zprv: {}", hex::encode(extended_private_key.encode()));
   }
 
   pub fn ckd_public_parent_to_public_child_key(
@@ -502,10 +502,6 @@ impl Wallet {
 
   fn get_fingerprint(&self, public_key: String) -> Vec<u8>{
     let hash160 = get_hash160(public_key);
-
-    println!("{}", hash160);
-    println!("{:?}", hex::decode(&hash160).unwrap());
-
     hex::decode(&hash160).unwrap()[..4].to_vec() // fingerprint is the first 32 bits
   }
 }

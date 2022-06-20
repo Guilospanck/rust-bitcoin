@@ -3,8 +3,8 @@ use hmac::{Hmac, Mac};
 use num::pow::pow;
 use num_bigint::{BigInt, BigUint, Sign};
 use ripemd::{Digest, Ripemd160};
-use sha2::Sha512;
-use sha256::digest;
+use sha2::{Sha512};
+use sha256;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 
@@ -98,7 +98,7 @@ pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> Stri
     .iter()
     .map(|transaction| {
       let stringfied = serde_json::to_string(transaction).unwrap();
-      digest(digest(stringfied))
+      sha256::digest(sha256::digest(stringfied))
     })
     .collect();
 
@@ -114,7 +114,7 @@ pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> Stri
 /// // Hashes transactions
 /// let hashed_transactions: Vec<String> = transactions.iter().map(|transaction| {
 ///   let stringfied = serde_json::to_string(transaction).unwrap();
-///   digest(digest(stringfied))
+///   sha256::digest(sha256::digest(stringfied))
 /// }).collect();
 
 /// let merkle_root = build_merkle_root(hashed_transactions);
@@ -145,7 +145,7 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
     let hashed_next_tx = &hashed_transactions[index + 1]; // HB
     let hashed_current_and_next_tx = format!("{}{}", hashed_current_tx, hashed_next_tx);
 
-    let hash_current_and_next_tx = digest(digest(hashed_current_and_next_tx)); // HAB
+    let hash_current_and_next_tx = sha256::digest(sha256::digest(hashed_current_and_next_tx)); // HAB
 
     new_stringfied_transaction.push(hash_current_and_next_tx);
   }
@@ -176,7 +176,7 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 
     let stringfied = serde_json::to_string(&block_header).unwrap();
 
-    let hash = digest(&stringfied);
+    let hash = sha256::digest(&stringfied);
 
     let decimal_hash = BigInt::parse_bytes(&hash.as_bytes(), 16).unwrap();
 
@@ -193,13 +193,27 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
   mine_block(block_header);
 }
 
+/// Gets the HMAC-SHA512 one way hashing representation of 
+/// some data using a some key.
+/// It returns the representation in a string hexadecimal format.
+pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
+  type HmacSha512 = Hmac<Sha512>;
+
+  let mut data_as_hmacsha512 = HmacSha512::new_from_slice(&key)
+    .expect("Something went wrong with HMAC-Sha512 hashing");
+  data_as_hmacsha512.update(&data);
+  let result = data_as_hmacsha512.finalize();
+
+  format!("{:x}", result.into_bytes())
+}
+
 /// Gets the RIPEMD160 representation of a string.
 /// On Bitcoin it's used for generating address from a Public Key (K), like
 /// `RIPEMD160(SHA256(K))`
 ///
 pub fn ripemd160_hasher(data: String) -> String {
   let mut hasher = Ripemd160::new();
-  hasher.update(data);
+  hasher.update(hex::decode(&data).unwrap());
   let result = hasher.finalize();
 
   format!("{:x}", result)
@@ -208,24 +222,10 @@ pub fn ripemd160_hasher(data: String) -> String {
 /// Gets the HASH160 (`RIPEMD160(SHA256(K))`) of some data and returns its
 /// hashed data in the hex format.
 pub fn get_hash160(data: String) -> String {
-  let hashed_256 = digest(&data);
+  let hashed_256 = sha256::digest_bytes(&hex::decode(&data).unwrap());
   let ripemd160_hashed = ripemd160_hasher(hashed_256);
 
   ripemd160_hashed
-}
-
-/// Gets the HMAC-SHA512 one way hashing representation of 
-/// some data using a some key.
-/// It returns the representation in a string hexadecimal format.
-pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
-  type HmacSha512 = Hmac<Sha512>;
-
-  let mut seed_as_hmacsha512 = HmacSha512::new_from_slice(&key)
-    .expect("Something went wrong with HMAC-Sha512 hashing");
-  seed_as_hmacsha512.update(&data);
-  let result = seed_as_hmacsha512.finalize();
-
-  format!("{:x}", result.into_bytes())
 }
 
 /// Converts a vector of bytes from a representation to another.
