@@ -102,17 +102,16 @@ fn test_generate_bech32m_address() {
   my_wallet.generate_bech32m_address_from_public_key(hex::encode(public_key));
 }
 
-fn test_encode_bech32m_address() {
-  let hash160_public_key = String::from("2b002b9cfbddaa36ce8458b3d11c9478efd7980f");
+fn test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, encoding_type: EncodingType) {
   let hash160_as_vec_u8 = hex::decode(&hash160_public_key).unwrap();
   let hash160_as_base32 = helpers::convert_bits(8, 5, hash160_as_vec_u8);
 
   // witness version
-  let mut witness_version_plus_hash160 = vec![1u8];
+  let mut witness_version_plus_hash160 = vec![witness_version];
   witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
 
   let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
-  let encoded = bech32.encode(EncodingType::BECH32M);
+  let encoded = bech32.encode(encoding_type);
   println!("{:?}", encoded);
 }
 
@@ -145,7 +144,7 @@ fn main() {
 
   my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
   
-  my_wallet.get_keys_from_derivation_path("m/84'/0'/0'");
+  my_wallet.get_keys_from_derivation_path("M/84'/0'/0'/0/0");
 
   // Bip 84 test vector
   // let master_private_key = "1837c1be8e2995ec11cda2b066151be2cfb48adf9e47b151d46adab3a21cdf67".to_owned();
@@ -188,4 +187,12 @@ fn main() {
 
   // println!("Chain M/0:");
   // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
+
+
+  // ========================= Test address ===================================
+  // test_encode_bech32m_address(
+  //   helpers::get_hash160("0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned()),
+  //   0u8,
+  //   EncodingType::BECH32
+  // );
 }

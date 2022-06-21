@@ -126,6 +126,7 @@ impl Bech32 {
   /// - `payload`: {witness_version}{program} as Base32 vector of bytes, where:
   ///    - `witness_version`: 0..16
   ///    - `program`: Base32(HASH160(K))
+  /// 
   pub fn new(hrp: String, payload: Vec<u8>) -> Self {
     Bech32 { hrp, payload }
   }
@@ -133,6 +134,7 @@ impl Bech32 {
   /// Will return a encoded Bech32(m) address from a previous Bech32 struct created.
   /// If something goes wrong with the encoding, will return an error.
   /// - `encoding_type`: BECH32 or BECH32M
+  /// 
   pub fn encode(&self, encoding_type: EncodingType) -> Result<String> {
     if self.hrp.len() < MIN_HRP_LENGTH || self.hrp.len() > MAX_HRP_LENGTH {
       return Err(Bech32Error::InvalidLength);

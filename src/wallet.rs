@@ -37,8 +37,8 @@ const MAINNET_BTC_BIP84_ZPRV: &[u8] = &[0x04, 0xb2, 0x43, 0x0c];
 const MAINNET_BTC_BIP84_ZPUB: &[u8] = &[0x04, 0xb2, 0x47, 0x46];
 
 pub struct DerivationPath(Vec<u32>);
-const PRIVATE_KEY_DERIVATION_PATH: &str  = "m";
-const PUBLIC_KEY_DERIVATION_PATH: &str  = "M";
+const PRIVATE_KEY_DERIVATION_PATH: &str = "m";
+const PUBLIC_KEY_DERIVATION_PATH: &str = "M";
 
 pub struct ExtendedPublicKey {
   /// Current chain code
@@ -494,6 +494,14 @@ impl Wallet {
     };
   }
 
+  /// Generates children keys using the derivation path.
+  /// ---
+  /// Example:
+  ///
+  /// ```rust
+  /// my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
+  /// my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
+  /// ```
   pub fn get_keys_from_derivation_path<P>(&mut self, derivation_path: P) -> ()
   where
     P: Into<PathBuf>,
@@ -512,37 +520,87 @@ impl Wallet {
       return;
     }
 
+    // get path as string
     let path = match path.to_str() {
       Some(stringfied) => stringfied,
       None => return,
     };
 
+    // get vector of string splitted by slash
     let path: Vec<&str> = path.split("/").collect();
-    
     match path[0] {
-      PUBLIC_KEY_DERIVATION_PATH => println!("public key dp"),
-      PRIVATE_KEY_DERIVATION_PATH => self.get_child_private_keys_from_derivation_path(path[1..].to_vec()),
-      _ => println!("error")
+      PUBLIC_KEY_DERIVATION_PATH => {
+        self.get_child_public_keys_from_derivation_path(path[1..].to_vec())
+      }
+      PRIVATE_KEY_DERIVATION_PATH => {
+        self.get_child_private_keys_from_derivation_path(path[1..].to_vec())
+      }
+      _ => println!("Unknown derivation path"),
     }
   }
 
-  pub fn get_child_private_keys_from_derivation_path(&mut self, derivation_path_vector: Vec<&str>) -> () {
+  pub fn get_child_private_keys_from_derivation_path(
+    &mut self,
+    derivation_path_vector: Vec<&str>,
+  ) -> () {
     let parent_private_key_bytes = hex::decode(self.master_keys.private_key.clone()).unwrap();
     let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone()).unwrap();
 
-    let mut current_private_key: Vec<u8> = Vec::new();
-    let mut current_chain_code: Vec<u8> = Vec::new();
+    let mut dpath_string = PathBuf::new();
+    dpath_string.push("m");
 
     for depth in 0..derivation_path_vector.len() {
       println!("===========================");
       let index = self.get_normal_or_hardened_index(derivation_path_vector[depth]);
+      dpath_string.push(format!("{}", index));
+      println!("{}", match dpath_string.to_str() {Some(data) => data, None => ""});
       if depth == 0 {
-        self.ckd_private_parent_to_private_child_key(parent_private_key_bytes.clone(), parent_chain_code_bytes.clone(), index);
+        self.ckd_private_parent_to_private_child_key(
+          parent_private_key_bytes.clone(),
+          parent_chain_code_bytes.clone(),
+          index,
+        );
         continue;
-      } 
+      }
 
-      self.ckd_private_parent_to_private_child_key(self.current_private_key.clone(), self.current_chain_code.clone(), index);
-    }    
+      self.ckd_private_parent_to_private_child_key(
+        self.current_private_key.clone(),
+        self.current_chain_code.clone(),
+        index,
+      );
+    }
+  }
+
+  pub fn get_child_public_keys_from_derivation_path(
+    &mut self,
+    derivation_path_vector: Vec<&str>,
+  ) -> () {
+    let parent_public_key_bytes = hex::decode(self.master_keys.public_key.clone()).unwrap();
+    let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone()).unwrap();
+
+    let mut dpath_string = PathBuf::new();
+    dpath_string.push("M");
+
+    for depth in 0..derivation_path_vector.len() {
+      println!("===========================");
+      let index = self.get_normal_or_hardened_index(derivation_path_vector[depth]);
+      dpath_string.push(format!("{}", index));
+      println!("{}", match dpath_string.to_str() {Some(data) => data, None => ""});
+      if depth == 0 {
+        self.ckd_public_parent_to_public_child_key(
+          parent_public_key_bytes.clone(),
+          parent_chain_code_bytes.clone(),
+          index,
+        );
+        continue;
+      }
+
+      self.ckd_public_parent_to_public_child_key(
+        self.current_public_key.clone(),
+        self.current_chain_code.clone(),
+        index,
+      );
+    }
   }
 
   fn get_normal_or_hardened_index(&mut self, index: &str) -> u32 {
@@ -550,9 +608,8 @@ impl Wallet {
       let index: Vec<&str> = index.split("'").collect();
       let u32_index = index[0].parse::<u32>().unwrap();
       let base: u32 = 2;
-      return base.pow(31) + u32_index
+      return base.pow(31) + u32_index;
     }
-    
     index.parse::<u32>().unwrap()
   }
 
@@ -651,6 +708,7 @@ impl Wallet {
     );
     println!("zprv: {}", hex::encode(extended_private_key.encode()));
 
+    // updates current private key and chain code
     self.current_chain_code = hex::decode(child_chain_code).unwrap();
     self.current_private_key = hex::decode(&child_private_key).unwrap();
   }
@@ -691,11 +749,14 @@ impl Wallet {
   /// ```
   ///
   pub fn ckd_public_parent_to_public_child_key(
-    &self,
+    &mut self,
     public_parent_key: Vec<u8>,
     parent_chain_code: Vec<u8>,
     index: u32,
   ) -> () {
+    // updates depth
+    self.depth = self.depth + 1;
+
     let base: u32 = 2;
 
     if index >= base.pow(31) {
@@ -743,6 +804,10 @@ impl Wallet {
     );
 
     println!("zpub: {}", hex::encode(extended_public_key.encode()));
+
+    // updates current public key and chain code
+    self.current_chain_code = hex::decode(child_chain_code).unwrap();
+    self.current_public_key = child_public_key.clone().serialize().to_vec();
   }
 
   /// Gets the Fingerprint of the public key. It accepts a hex encoded public key.
