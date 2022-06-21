@@ -129,21 +129,23 @@ fn main() {
   let mut my_wallet = wallet::Wallet::new();
 
   // Bip 84 test vector
-  // let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
-  // let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
+  let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
 
   // BIP 32 test vector 1
   // let seed = "000102030405060708090a0b0c0d0e0f".to_owned();
 
   // BIP 32 test vector 2
-  let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
+  // let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
 
-  println!("\nSeed: {}", seed);
+  // println!("\nSeed: {}", seed);
 
   println!();
   println!("Chain m:");
 
   my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
+  
+  my_wallet.get_keys_from_derivation_path("m/84'/0'/0'");
 
   // Bip 84 test vector
   // let master_private_key = "1837c1be8e2995ec11cda2b066151be2cfb48adf9e47b151d46adab3a21cdf67".to_owned();
@@ -170,8 +172,8 @@ fn main() {
   // println!("Chain m/84':");
   // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 2_147_483_732);
 
-  println!("Chain m/0:");
-  my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 0);
+  // println!("Chain m/0:");
+  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 0);
 
   // println!("Chain m/0':");
   // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 2_147_483_648); // 2^31
@@ -184,6 +186,6 @@ fn main() {
   // println!("Chain M/0':");
   // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 2_147_483_648); // 2^31
 
-  println!("Chain M/0:");
-  my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
+  // println!("Chain M/0:");
+  // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
 }
