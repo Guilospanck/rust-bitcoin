@@ -163,7 +163,7 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 /// finally loops through all nonces (0 - MAX_NONCE), sha256 hashing the result
 /// and comparing if it is less than or equal to the bits.
 ///
-/// When the whole nonce spectrum is used and a valid hash wasn't found, it then
+/// When the whole nonce spectrum is used and a valid hash isn't found, it then
 /// updates the block timestamp and tries again.
 ///
 pub fn mine_block(block_header: &mut BlockHeader) -> () {
@@ -242,9 +242,9 @@ pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
     bits.push_str(&format!("{:0from$b}", byte, from = from as usize));
   }
 
-  let divisible_by_five = (bits.len() % (to as usize)) == 0;
+  let divisible_by_to = (bits.len() % (to as usize)) == 0;
 
-  if !divisible_by_five {
+  if !divisible_by_to {
     let bits_to_pad = (to as usize) - (bits.len() % (to as usize));
     for _i in 0..bits_to_pad {
       bits.push('0');
