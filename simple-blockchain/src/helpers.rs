@@ -194,8 +194,9 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 }
 
 /// Gets the HMAC-SHA512 one way hashing representation of 
-/// some data using a some key.
+/// some data using some key.
 /// It returns the representation in a string hexadecimal format.
+/// 
 pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
   type HmacSha512 = Hmac<Sha512>;
 
@@ -207,7 +208,8 @@ pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
   format!("{:x}", result.into_bytes())
 }
 
-/// Gets the RIPEMD160 representation of a string.
+/// Gets the RIPEMD160 representation of a hexadecimal string, returning
+/// its hexadecimal representation.
 /// On Bitcoin it's used for generating address from a Public Key (K), like
 /// `RIPEMD160(SHA256(K))`
 ///
@@ -219,8 +221,9 @@ pub fn ripemd160_hasher(data: String) -> String {
   format!("{:x}", result)
 }
 
-/// Gets the HASH160 (`RIPEMD160(SHA256(K))`) of some data and returns its
-/// hashed data in the hex format.
+/// Gets the HASH160 (`RIPEMD160(SHA256(K))`) of some hexadecimal data
+/// and returns its hashed data in the hex format.
+/// 
 pub fn get_hash160(data: String) -> String {
   let hashed_256 = sha256::digest_bytes(&hex::decode(&data).unwrap());
   let ripemd160_hashed = ripemd160_hasher(hashed_256);
