@@ -1,6 +1,5 @@
-# rust-blockchain
-Blockchain implementation(s) in Rust.
+# rust-bitcoin
+Bitcoin protocol implementation in Rust.
 Feel free to correct me on anything. As always, I'm here to learn and the only thing that matters is the truth.
 
-## simple-blockchain
-In this repository, there's a simple implementation of how the BTC protocol works (under construction 🚧).
+<center><b>(Under Construction 🚧)</b></center>
