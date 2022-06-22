@@ -17,6 +17,7 @@ pub struct ChildPublicKeyChainCodeAndzpub {
   pub zpub: ExtendedPublicKey
 }
 
+#[derive(Debug)]
 pub struct ExtendedPublicKey {
   /// Current chain code
   pub chain_code: Vec<u8>,
@@ -31,6 +32,7 @@ pub struct ExtendedPublicKey {
 }
 
 impl ExtendedPublicKey {
+  /// Extended public key encoding
   pub fn encode(&self) -> [u8; 78] {
     let mut ret = [0; 78];
 
@@ -43,8 +45,27 @@ impl ExtendedPublicKey {
 
     ret
   }
+
+  /// Extended public key decoding
+  pub fn decode(&self, data: [u8; 78]) -> Self {
+    let depth = data[4];
+    let parent_key_fingerprint: Vec<u8> = data[5..9].to_vec();
+    let child_number: u32 = u32::from_be_bytes(data[9..13].try_into().unwrap());
+    let chain_code: Vec<u8> = data[13..45].to_vec();
+    let key: Vec<u8> = data[45..78].to_vec();
+
+    Self {
+      depth,
+      chain_code,
+      child_number,
+      key,
+      parent_key_fingerprint
+    }
+
+  }
 }
 
+#[derive(Debug)]
 pub struct ExtendedPrivateKey {
   /// Current chain code
   pub chain_code: Vec<u8>,
@@ -73,6 +94,23 @@ impl ExtendedPrivateKey {
     ret[46..78].copy_from_slice(&self.key); // private key 32 bytes
 
     ret
+  }
+
+  /// Extended private key decoding
+  pub fn decode(&self, data: [u8; 78]) -> Self {
+    let depth = data[4];
+    let parent_key_fingerprint: Vec<u8> = data[5..9].to_vec();
+    let child_number: u32 = u32::from_be_bytes(data[9..13].try_into().unwrap());
+    let chain_code: Vec<u8> = data[13..45].to_vec();
+    let key: Vec<u8> = data[46..78].to_vec();
+
+    Self {
+      depth,
+      chain_code,
+      child_number,
+      key,
+      parent_key_fingerprint
+    }
   }
 }
 

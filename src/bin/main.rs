@@ -144,8 +144,8 @@ fn main() {
 
   my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
   
-  // my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
-  my_wallet.get_keys_from_derivation_path("M/84/0/0/0/0");
+  my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
+  // my_wallet.get_keys_from_derivation_path("M/84/0/0/0/0");
 
   // Bip 84 test vector
   // let master_private_key = "1837c1be8e2995ec11cda2b066151be2cfb48adf9e47b151d46adab3a21cdf67".to_owned();

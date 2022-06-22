@@ -519,11 +519,16 @@ impl Wallet {
       self.current_private_key = child_keys.child_private_key.clone();
       self.current_public_key = self.get_public_key_from_private_key(child_keys.child_private_key);
 
-      println!("Child Chain code: {}\n Child Prv Key: {}\n Child Pub Key: {}\n zprv: {}", 
+      println!("Child Chain code: {}\nChild Prv Key: {}\nChild Pub Key: {}\nzprv: {}", 
         hex::encode(&self.current_chain_code),
         hex::encode(&self.current_private_key),
         hex::encode(&self.current_public_key),
-        hex::encode(child_keys.zprv.encode())
+        hex::encode(child_keys.zprv.encode()),
+      );
+
+      println!("Child Chain code decoded: {}\nChild Priv Key decoded: {}", 
+        hex::encode(child_keys.zprv.decode(child_keys.zprv.encode()).chain_code),
+        hex::encode(child_keys.zprv.decode(child_keys.zprv.encode()).key),
       );
     }
   }
@@ -565,6 +570,11 @@ impl Wallet {
         hex::encode(&self.current_chain_code),
         hex::encode(&self.current_public_key),
         hex::encode(child_keys.zpub.encode())
+      );
+
+      println!("Child Chain code decoded: {}\nChild Pub Key decoded: {}", 
+        hex::encode(child_keys.zpub.decode(child_keys.zpub.encode()).chain_code),
+        hex::encode(child_keys.zpub.decode(child_keys.zpub.encode()).key),
       );
     }
   }
