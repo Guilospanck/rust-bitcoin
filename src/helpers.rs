@@ -7,6 +7,7 @@ use sha2::{Sha512};
 use sha256;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
+use std::path::PathBuf;
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -318,4 +319,18 @@ pub fn read_from_a_file_to_a_vec_string(path: String) -> std::io::Result<Vec<Str
     .collect();
 
   Ok(lines)
+}
+
+/// Simple helper function to print the derivation path that is currently
+/// being solved.
+pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) -> () {
+  println!("===========================");
+  dpath_string.push(format!("{}", index));
+  println!(
+    "{}",
+    match dpath_string.to_str() {
+      Some(data) => data,
+      None => "",
+    }
+  );
 }
