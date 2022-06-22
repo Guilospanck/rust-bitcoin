@@ -397,24 +397,29 @@ impl Wallet {
 
     let master_public_key = self.get_public_key_from_private_key(master_private_key_bytes);
 
-    let master_chain_code = &seed_as_sha512[64..]; // right half
+    let master_chain_code = &seed_as_sha512[64..]; // right half   
+
+    self.master_keys = MasterKeys {
+      private_key: master_private_key.to_string(),
+      public_key: hex::encode(master_public_key.clone()),
+      chain_code: master_chain_code.to_owned(),
+    };
 
     println!(
       "m: {}\nM: {}\nMaster chain code: {}",
       master_private_key,
-      hex::encode(master_public_key.clone()),
+      &self.master_keys.public_key,
       master_chain_code
     );
 
     // Extended public key
     let extended_public_key = ExtendedPublicKey {
       chain_code: hex::decode(&master_chain_code).unwrap(),
-      key: master_public_key.clone(),
+      key: master_public_key,
       depth: 0,
       parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
       child_number: 0,
     };
-
     println!("zpub: {}", hex::encode(extended_public_key.encode()));
 
     // Extended private key
@@ -425,14 +430,7 @@ impl Wallet {
       parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
       child_number: 0,
     };
-
     println!("zprv: {}", hex::encode(extended_private_key.encode()));
-
-    self.master_keys = MasterKeys {
-      private_key: master_private_key.to_string(),
-      public_key: hex::encode(master_public_key),
-      chain_code: master_chain_code.to_owned(),
-    };
   }
 
   /// Generates children keys using the derivation path.

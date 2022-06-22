@@ -103,17 +103,20 @@ impl ExtendedPrivateKey {
 /// ```rust
 /// let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
 /// let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
-
+/// let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+/// 
 /// let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+/// let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
 /// let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
 ///
 /// // Chain m/0
-/// my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 0);
+/// let child_keys = my_wallet.ckd_private_parent_to_private_child_key(
+/// master_private_key_bytes, master_public_key_bytes,
+/// master_chain_code_bytes, 0, 1);
 ///
-/// assert_eq!(child_public_key, "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
-/// assert_eq!(child_private_key, "abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
-/// assert_eq!(child_chain_code, "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c");
-/// assert_eq!(zprv, "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
+/// assert_eq!(child_keys.child_private_key, hex::decode("abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e").unwrap());
+/// assert_eq!(child_keys.child_chain_code, hex::decode("f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c").unwrap());
+/// assert_eq!(hex::encode(child_keys.zprv.encode()), "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
 /// ```
 ///
 pub fn ckd_private_parent_to_private_child_key(
@@ -196,11 +199,11 @@ pub fn ckd_private_parent_to_private_child_key(
   /// let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
   ///
   /// // Chain M/0
-  /// my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
+  /// let child_keys = my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0, 1);
   ///
-  /// assert_eq!(child_public_key, "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
-  /// assert_eq!(child_chain_code, "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c");
-  /// assert_eq!(zpub, "04b2474601bd16bee50000000060499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd968902fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
+  /// assert_eq!(hex::encode(child_keys.child_public_key), "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
+  /// assert_eq!(hex::encode(child_keys.child_chain_code), "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c");
+  /// assert_eq!(hex::encode(child_keys.zpub.encode()), "04b2474601bd16bee50000000060499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd968902fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
   /// ```
   ///
   pub fn ckd_public_parent_to_public_child_key(
