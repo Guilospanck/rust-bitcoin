@@ -6,6 +6,7 @@ pub mod helpers;
 pub mod wallet;
 pub mod bech32;
 pub mod bip32;
+pub mod bip39;
 mod block;
 mod blockchain;
 mod transaction;

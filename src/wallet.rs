@@ -1,11 +1,8 @@
-use crate::bech32::{Bech32, Bech32Decoded, EncodingType, MAIN_NET_BTC};
-use crate::bip32::{
-  ckd_private_parent_to_private_child_key, ckd_public_parent_to_public_child_key,
-  get_normal_or_hardened_index, ExtendedPrivateKey, ExtendedPublicKey,
-};
+use crate::bech32;
+use crate::bip32;
+use crate::bip39;
 use crate::helpers::{
-  convert_bits, get_hash160, get_pbkdf2_sha512, hmac_sha512_hasher, print_derivation_path,
-  read_from_a_file_to_a_vec_string,
+  convert_bits, get_hash160, hmac_sha512_hasher, print_derivation_path,
 };
 use hex;
 use num_bigint::{BigInt, Sign};
@@ -15,28 +12,18 @@ use sha256::digest;
 use std::path::PathBuf;
 use std::result;
 use thiserror::Error;
-use unicode_normalization::UnicodeNormalization;
 
 #[derive(Error, Debug)]
 pub enum WalletError {
   #[error("Bech32 Encoding error: `{0}`")]
   Bech32EncodingError(String),
   #[error("Bech32 Decoding error: `{0}`")]
-  Bech32DecodingError(String),
-  #[error("IO error: `{0}`")]
-  IOError(String),
-  #[error("Error: entropy out of bonds. It must be between 128 and 256.")]
-  EntropyOutOfBonds,
-  #[error("Error: entropy must be multiple of 32 bits.")]
-  EntropyMustBe32Multiple,
-  #[error("Error: initial entropy + checksum must be multiple of 11.")]
-  EntropyPlusChecksumMustBe11Multiple,
+  Bech32DecodingError(String)
 }
 
 type Result<T> = result::Result<T, WalletError>;
 
 const HMAC_SHA512_KEY: &str = "Bitcoin seed";
-const MNEMONIC_STRING: &str = "mnemonic";
 const PRIVATE_KEY_DERIVATION_PATH: &str = "m";
 const PUBLIC_KEY_DERIVATION_PATH: &str = "M";
 
@@ -86,6 +73,7 @@ impl MasterKeys {
 }
 
 impl Wallet {
+  /// Creates a new wallet structure.
   pub fn new() -> Self {
     let master_keys = MasterKeys::new();
     Wallet {
@@ -197,8 +185,8 @@ impl Wallet {
     let mut witness_version_plus_hash160 = vec![1u8];
     witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
 
-    let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
-    match bech32.encode(EncodingType::BECH32M) {
+    let bech32 = bech32::Bech32::new(bech32::MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
+    match bech32.encode(bech32::EncodingType::BECH32M) {
       Ok(encoded) => {
         println!("Bech32m encoded: {}", encoded);
         return Ok(encoded);
@@ -221,8 +209,8 @@ impl Wallet {
   /// assert_eq!(bech32_decoded, Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
   /// ```
   ///
-  pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Result<Bech32Decoded> {
-    let bech32m = Bech32::empty();
+  pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Result<bech32::Bech32Decoded> {
+    let bech32m = bech32::Bech32::empty();
     match bech32m.decode(bech32m_address) {
       Ok(decoded) => {
         println!("Bech32m decoded: {:?}", decoded);
@@ -234,38 +222,19 @@ impl Wallet {
     }
   }
 
-  /// Generates a mnemonic from a vector of bytes (an entropy).
+  /// Gets a mnemonic from a vector of bytes (an entropy) using BIP39 rules.
   /// The entropy is anything that has size of 128 - 256 bits, as
   /// a private key, for example - which you can generate
   /// using the `generate_private_key()` method described above.
-  ///
-  /// (See: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
-  /// ENT: initial entropy length. 128-256 bits => must be a multiple of 32 bits.
-  /// CS: checksum
-  /// MS: mnemonic sentence in words
-  ///
-  /// CS = ENT / 32
-  ///
-  /// MS = (ENT + CS) / 11
-  ///
-  /// ```
-  /// |  ENT  | CS | ENT+CS |  MS  |
-  /// +-------+----+--------+------+
-  /// |  128  |  4 |   132  |  12  |
-  /// |  160  |  5 |   165  |  15  |
-  /// |  192  |  6 |   198  |  18  |
-  /// |  224  |  7 |   231  |  21  |
-  /// |  256  |  8 |   264  |  24  |
-  /// ```
-  ///
+  /// 
   /// ---
   /// Example:
   /// ```rust
-  /// let my_wallet = wallet::Wallet {};
+  /// let my_wallet = Wallet::new();
   ///
   /// let entropy = &[0x0C, 0x1E, 0x24, 0xE5, 0x91, 0x77, 0x79, 0xD2, 0x97, 0xE1, 0x4D, 0x45, 0xF1, 0x4E, 0x1A, 0x1A].to_vec();
   ///
-  /// let mnemonic = match my_wallet.generate_mnemonic_from_entropy(entropy) {
+  /// let mnemonic = match my_wallet.get_mnemonic_from_entropy(entropy) {
   ///   Ok(data) => data,
   ///   Err(err) => panic!("{}", err),
   /// };
@@ -273,60 +242,8 @@ impl Wallet {
   /// assert_eq!(mnemonic, &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec());
   /// ```
   ///
-  pub fn generate_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Result<Vec<String>> {
-    let entropy_length = entropy.len() * 8;
-
-    if entropy_length < 128 || entropy_length > 256 {
-      return Err(WalletError::EntropyOutOfBonds);
-    }
-
-    if entropy_length % 32 != 0 {
-      return Err(WalletError::EntropyMustBe32Multiple);
-    }
-
-    let entropy_as_bits: String = entropy.iter().map(|v| format!("{:08b}", v)).collect();
-
-    // Get bits representation of the SHA256(entropy)
-    let sha256_entropy = sha256::digest_bytes(&entropy);
-    let sha256_entropy_as_bytes = hex::decode(&sha256_entropy).unwrap();
-    let sha256_entropy_as_bits: String = sha256_entropy_as_bytes
-      .iter()
-      .map(|v| format!("{:08b}", v))
-      .collect();
-
-    // Get checksum
-    let num_bits_of_checksum: usize = entropy_length / 32;
-    let checksum = &sha256_entropy_as_bits[..num_bits_of_checksum];
-
-    // Append checksum to the end of initial entropy
-    let entropy = format!("{}{}", entropy_as_bits, checksum);
-
-    if entropy.len() % 11 != 0 {
-      return Err(WalletError::EntropyPlusChecksumMustBe11Multiple);
-    }
-
-    // group bits in groups of 11
-    let mut group: Vec<u16> = Vec::new();
-    for bit in (0..entropy.len()).step_by(11) {
-      let value: u16 = u16::from_str_radix(&entropy[bit..bit + 11], 2).unwrap();
-      group.push(value);
-    }
-
-    // read wordlist
-    let wordlist: Vec<String> =
-      match read_from_a_file_to_a_vec_string("./src/wordlist/english.txt".to_owned()) {
-        Ok(data) => data,
-        Err(err) => return Err(WalletError::IOError(err.to_string())),
-      };
-
-    // get mnemonic
-    let mut mnemonic: Vec<String> = Vec::new();
-    for value in group {
-      mnemonic.push(wordlist[value as usize].clone());
-    }
-
-    println!("Mnemonic: {:?}", mnemonic);
-    Ok(mnemonic)
+  pub fn get_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> result::Result<Vec<String>, bip39::Bip39Error> {
+    bip39::generate_mnemonic_from_entropy(entropy)
   }
 
   /// Returns the seed that the mnemonic represents with its passphrase.
@@ -343,29 +260,17 @@ impl Wallet {
   /// let my_wallet = wallet::Wallet {};
   /// let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
   ///
-  /// let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  /// let seed = my_wallet.seed_from_mnemonic(mnemonic, None);
   ///
   /// assert_eq!(seed, "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned());
   /// ```
   ///
-  pub fn get_seed_from_mnemonic(
+  pub fn seed_from_mnemonic(
     &self,
     mnemonic: Vec<String>,
     passphrase: Option<String>,
   ) -> String {
-    // Verify passphrase. If a passphrase is not used, an empty string is used instead.
-    let passphrase: String = match passphrase {
-      Some(pass) => pass,
-      None => "".to_owned(),
-    };
-
-    let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
-    let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
-
-    let salt = format!("{}{}", MNEMONIC_STRING, passphrase);
-    let normalized_salt = salt.nfkd().to_string();
-
-    get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt)
+    bip39::get_seed_from_mnemonic(mnemonic, passphrase)
   }
 
   /// Derives Master Keys from the Seed.
@@ -413,7 +318,7 @@ impl Wallet {
     );
 
     // Extended public key
-    let extended_public_key = ExtendedPublicKey {
+    let extended_public_key = bip32::ExtendedPublicKey {
       chain_code: hex::decode(&master_chain_code).unwrap(),
       key: master_public_key,
       depth: 0,
@@ -423,7 +328,7 @@ impl Wallet {
     println!("zpub: {}", hex::encode(extended_public_key.encode()));
 
     // Extended private key
-    let extended_private_key = ExtendedPrivateKey {
+    let extended_private_key = bip32::ExtendedPrivateKey {
       chain_code: hex::decode(&master_chain_code).unwrap(),
       key: hex::decode(&master_private_key).unwrap(),
       depth: 0,
@@ -490,7 +395,7 @@ impl Wallet {
     dpath_string.push(PRIVATE_KEY_DERIVATION_PATH);
 
     for depth in 0..derivation_path_vector.len() {
-      let index = get_normal_or_hardened_index(derivation_path_vector[depth]);
+      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth]);
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_prv_key = self.current_private_key.clone();
@@ -506,7 +411,7 @@ impl Wallet {
         curr_pub_key = parent_public_key_bytes.clone();
       }
 
-      let child_keys = ckd_private_parent_to_private_child_key(
+      let child_keys = bip32::ckd_private_parent_to_private_child_key(
         curr_prv_key,
         curr_pub_key,
         curr_chain_code,
@@ -544,7 +449,7 @@ impl Wallet {
     dpath_string.push(PUBLIC_KEY_DERIVATION_PATH);
 
     for depth in 0..derivation_path_vector.len() {
-      let index = get_normal_or_hardened_index(derivation_path_vector[depth]);
+      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth]);
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_chain_code = self.current_chain_code.clone();
@@ -560,7 +465,7 @@ impl Wallet {
       }
 
       let child_keys =
-        ckd_public_parent_to_public_child_key(curr_pub_key, curr_chain_code, index, self.depth);
+      bip32::ckd_public_parent_to_public_child_key(curr_pub_key, curr_chain_code, index, self.depth);
 
       // updates current public key and chain code
       self.current_chain_code = child_keys.child_chain_code;

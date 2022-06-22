@@ -129,7 +129,7 @@ fn main() {
 
   // Bip 84 test vector
   let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
-  let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
+  let seed = my_wallet.seed_from_mnemonic(mnemonic, None);
 
   // BIP 32 test vector 1
   // let seed = "000102030405060708090a0b0c0d0e0f".to_owned();
