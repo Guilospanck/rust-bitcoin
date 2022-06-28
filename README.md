@@ -5,6 +5,6 @@ Feel free to correct me on anything. As always, I'm here to learn and the only t
 <center><b>(Under Construction 🚧)</b></center>
 
 ## To-Do:
+- [x] Base58Check;
 - [ ] Bip32 and Wallet error handling;
-- [ ] Base58Check;
 
