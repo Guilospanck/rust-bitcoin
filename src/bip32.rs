@@ -1,5 +1,5 @@
 use crate::helpers::{get_hash160, hmac_sha512_hasher};
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use secp256k1::{PublicKey, Secp256k1};
 
 /// BIP84 CONSTANTS
 const MAINNET_BTC_BIP84_ZPRV: &[u8] = &[0x04, 0xb2, 0x43, 0x0c];

@@ -1,4 +1,5 @@
 use btc::helpers;
+use btc::base58check;
 use btc::wallet;
 use btc::{BlockHeader, Transaction};
 use btc::bech32::{Bech32, MAIN_NET_BTC, EncodingType};
@@ -196,4 +197,9 @@ fn main() {
   //   0u8,
   //   EncodingType::BECH32
   // );
+
+  // ================================= Test Base58Check ========================
+  let child_pvd_key = "4604b4b710fe91f584fff084e1a9159fe4f8408fff380596a604948474ce4fa3".to_owned();
+  let base58_check = base58check::Base58Check{};
+  base58_check.encode_private_key(child_pvd_key);
 }
