@@ -9,8 +9,10 @@ pub enum Bip32Error {
   HexDecodeError(String),
   #[error("Secp256k1Error: `{0}`")]
   Secp256k1Error(String),
-  #[error("PaseIntError: `{0}`")]
-  PaseIntError(String),
+  #[error("ParseIntError: `{0}`")]
+  ParseIntError(String),
+  #[error("Error: K -> K is not defined for hardened keys.")]
+  PublicKeyNotDefinedForHardenedKeys,
 }
 
 impl std::convert::From<hex::FromHexError> for Bip32Error {
@@ -27,7 +29,7 @@ impl std::convert::From<secp256k1::Error> for Bip32Error {
 
 impl std::convert::From<std::num::ParseIntError> for Bip32Error {
   fn from(error: std::num::ParseIntError) -> Self {
-    Self::PaseIntError(format!("{}", error))
+    Self::ParseIntError(format!("{}", error))
   }
 }
 
@@ -284,7 +286,7 @@ pub fn ckd_public_parent_to_public_child_key(
   let base: u32 = 2;
 
   if index >= base.pow(31) {
-    panic!("Error: K -> K is not defined for hardened keys.");
+    return Err(Bip32Error::PublicKeyNotDefinedForHardenedKeys);
   }
 
   // gets data

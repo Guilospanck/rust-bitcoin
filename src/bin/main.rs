@@ -96,7 +96,13 @@ fn test_merkle_root() {
 
 fn test_generate_bech32m_address() {
   let my_wallet = wallet::Wallet::new();
-  let (_dec_private_key, sha256_dec_private_key) = my_wallet.generate_private_key();
+  let private_key_generated = my_wallet.generate_private_key();
+
+  let (_dec_private_key, sha256_dec_private_key) = match private_key_generated {
+    Ok(data) => data,
+    Err(err) => panic!("{}", err),
+  };
+
   let private_key_bytes = hex::decode(&sha256_dec_private_key).unwrap();
 
   let public_key = my_wallet.get_public_key_from_private_key(private_key_bytes);

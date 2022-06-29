@@ -15,10 +15,44 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum WalletError {
-  #[error("Bech32 Encoding error: `{0}`")]
-  Bech32EncodingError(String),
-  #[error("Bech32 Decoding error: `{0}`")]
-  Bech32DecodingError(String)
+  #[error("Bech32Error: `{0}`")]
+  Bech32Error(String),
+  #[error("Bip32Error: `{0}`")]
+  Bip32Error(String),
+  #[error("Bip39Error: `{0}`")]
+  Bip39Error(String),
+  #[error("HexDecodeError: `{0}`")]
+  HexDecodeError(String),  
+  #[error("Error: Derivation path must begin with either M or m")]
+  DerivationPathMustBeginWithEithermOrM,
+  #[error("Error: Path conversion to string returns None")]
+  PathConversionToStrReturnsNone,
+  #[error("Error: Unknown derivation path")]
+  UnknownDerivationPath,
+}
+
+impl std::convert::From<bip32::Bip32Error> for WalletError {
+  fn from(error: bip32::Bip32Error) -> Self {
+    Self::Bip32Error(format!("{}", error))
+  }
+}
+
+impl std::convert::From<bip39::Bip39Error> for WalletError {
+  fn from(error: bip39::Bip39Error) -> Self {
+    Self::Bip39Error(format!("{}", error))
+  }
+}
+
+impl std::convert::From<bech32::Bech32Error> for WalletError {
+  fn from(error: bech32::Bech32Error) -> Self {
+    Self::Bech32Error(format!("{}", error))
+  }
+}
+
+impl std::convert::From<hex::FromHexError> for WalletError {
+  fn from(error: hex::FromHexError) -> Self {
+    Self::HexDecodeError(format!("{}", error))
+  }
 }
 
 type Result<T> = result::Result<T, WalletError>;
@@ -95,10 +129,14 @@ impl Wallet {
   /// Example:
   /// ```rust
   /// let wallet = Wallet::new();
-  /// let (dec_private_key, sha256_dec_private_key) = wallet.generate_private_key();
+  /// let private_key_generated = wallet.generate_private_key();
+  /// match private_key_generated {
+  ///   Ok((dec_private_key, sha256_dec_private_key)) => ,
+  ///   Err(err) => panic!("{}", err),
+  /// }
   /// ```
   ///
-  pub fn generate_private_key(&self) -> (u128, String) {
+  pub fn generate_private_key(&self) -> Result<(u128, String)> {
     let maximum_private_key_value: BigInt =
       BigInt::from(1158u16) * BigInt::from(10u8).pow(74) - 1u8;
 
@@ -106,7 +144,7 @@ impl Wallet {
     let random: u128 = random.gen::<u128>();
     let hexadecimal_private_key = digest(random.to_string());
 
-    let hexa_as_bytes = hex::decode(&hexadecimal_private_key).unwrap();
+    let hexa_as_bytes = hex::decode(&hexadecimal_private_key)?;
     let hexa_as_bigint = BigInt::from_bytes_be(Sign::Plus, &hexa_as_bytes);
 
     if hexa_as_bigint > maximum_private_key_value {
@@ -119,7 +157,7 @@ impl Wallet {
       hexadecimal_private_key
     );
 
-    (random, hexadecimal_private_key)
+    Ok((random, hexadecimal_private_key))
   }
 
   /// Derives a Public Key (K) from a Private Key (k) using ECC
@@ -168,7 +206,7 @@ impl Wallet {
   /// let K = wallet.get_public_key_from_private_key(k);
   /// assert_eq!(K, "0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned());
   /// let bech32m_address = wallet.generate_bech32m_address_from_public_key(K)?;
-  /// assert_eq!(bech32m_address, "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
+  /// assert_eq!(Ok(bech32m_address), "bc1pddprup5dlqhqtcmu6wnya4tsugngx56seuflu7".to_owned()); // witness version 1
   /// ```
   ///
   pub fn generate_bech32m_address_from_public_key(&self, public_key: String) -> Result<String> {
@@ -177,7 +215,7 @@ impl Wallet {
       "Ripemd160(SHA256(K)), also known as HASH160: {}",
       ripemd160_hashed
     );
-    let hash160_as_vec_u8 = hex::decode(&ripemd160_hashed).unwrap();
+    let hash160_as_vec_u8 = hex::decode(&ripemd160_hashed)?;
     let hash160_as_base32 = convert_bits(8, 5, hash160_as_vec_u8);
     println!("HASH160 in Base32: {:?}", hash160_as_base32);
 
@@ -186,13 +224,14 @@ impl Wallet {
     witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
 
     let bech32 = bech32::Bech32::new(bech32::MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
+    // Ok(bech32.encode(bech32::EncodingType::BECH32M)?)
     match bech32.encode(bech32::EncodingType::BECH32M) {
       Ok(encoded) => {
         println!("Bech32m encoded: {}", encoded);
         return Ok(encoded);
       }
       Err(error) => {
-        return Err(WalletError::Bech32EncodingError(error.to_string()));
+        return Err(WalletError::Bech32Error(error.to_string()));
       }
     }
   }
@@ -206,18 +245,19 @@ impl Wallet {
   /// let bech32_decoded = wallet.get_info_from_bech32m_address(bech32_address);
   ///
   /// // tests
-  /// assert_eq!(bech32_decoded, Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
+  /// assert_eq!(Ok(bech32_decoded), Ok(Bech32Decoded { hrp: "bc", payload: Payload { witness_version: "1", program: "6b423e068df82e05e37cd3a64ed570e226835350", checksum: "euflu7" } }));
   /// ```
   ///
   pub fn get_info_from_bech32m_address(&self, bech32m_address: String) -> Result<bech32::Bech32Decoded> {
     let bech32m = bech32::Bech32::empty();
+    // Ok(bech32m.decode(bech32m_address)?)
     match bech32m.decode(bech32m_address) {
       Ok(decoded) => {
         println!("Bech32m decoded: {:?}", decoded);
         return Ok(decoded);
       }
       Err(error) => {
-        return Err(WalletError::Bech32DecodingError(error.to_string()));
+        return Err(WalletError::Bech32Error(error.to_string()));
       }
     }
   }
@@ -242,8 +282,8 @@ impl Wallet {
   /// assert_eq!(mnemonic, &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec());
   /// ```
   ///
-  pub fn get_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> result::Result<Vec<String>, bip39::Bip39Error> {
-    bip39::generate_mnemonic_from_entropy(entropy)
+  pub fn get_mnemonic_from_entropy(&self, entropy: Vec<u8>) -> Result<Vec<String>> {
+    Ok(bip39::generate_mnemonic_from_entropy(entropy)?)
   }
 
   /// Returns the seed that the mnemonic represents with its passphrase.
@@ -295,10 +335,10 @@ impl Wallet {
   /// assert_eq!(my_wallet.master_keys, MasterKeys { private_key: "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e", public_key: "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7", chain_code: "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689" });
   /// ```
   ///
-  pub fn create_master_keys_from_seed(&mut self, seed: Vec<u8>) -> () {
+  pub fn create_master_keys_from_seed(&mut self, seed: Vec<u8>) -> Result<()> {
     let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.as_bytes().to_vec(), seed);
     let master_private_key = &seed_as_sha512[..64]; // left half
-    let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+    let master_private_key_bytes = hex::decode(&master_private_key)?;
 
     let master_public_key = self.get_public_key_from_private_key(master_private_key_bytes);
 
@@ -319,7 +359,7 @@ impl Wallet {
 
     // Extended public key
     let extended_public_key = bip32::ExtendedPublicKey {
-      chain_code: hex::decode(&master_chain_code).unwrap(),
+      chain_code: hex::decode(&master_chain_code)?,
       key: master_public_key,
       depth: 0,
       parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
@@ -329,13 +369,15 @@ impl Wallet {
 
     // Extended private key
     let extended_private_key = bip32::ExtendedPrivateKey {
-      chain_code: hex::decode(&master_chain_code).unwrap(),
-      key: hex::decode(&master_private_key).unwrap(),
+      chain_code: hex::decode(&master_chain_code)?,
+      key: hex::decode(&master_private_key)?,
       depth: 0,
       parent_key_fingerprint: [0x00, 0x00, 0x00, 0x00].to_vec(), // master
       child_number: 0,
     };
     println!("zprv: {}", hex::encode(extended_private_key.encode()));
+
+    Ok(())
   }
 
   /// Generates children keys using the derivation path.
@@ -346,7 +388,8 @@ impl Wallet {
   /// my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
   /// my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
   /// ```
-  pub fn get_keys_from_derivation_path<P>(&mut self, derivation_path: P) -> ()
+  /// 
+  pub fn get_keys_from_derivation_path<P>(&mut self, derivation_path: P) -> Result<()>
   where
     P: Into<PathBuf>,
   {
@@ -360,42 +403,43 @@ impl Wallet {
     // verifies if path begins with either "m" or "M", otherwise
     // returns error.
     if !path.starts_with("m") && !path.starts_with("M") {
-      println!("Derivation path must begin with either M or m");
-      return;
+      return Err(WalletError::DerivationPathMustBeginWithEithermOrM);
     }
 
     // get path as string
     let path = match path.to_str() {
       Some(stringfied) => stringfied,
-      None => return,
+      None => return Err(WalletError::PathConversionToStrReturnsNone),
     };
 
     // get vector of string splitted by slash
     let path: Vec<&str> = path.split("/").collect();
     match path[0] {
       PUBLIC_KEY_DERIVATION_PATH => {
-        self.get_child_public_keys_from_derivation_path(path[1..].to_vec())
+        self.get_child_public_keys_from_derivation_path(path[1..].to_vec())?
       }
       PRIVATE_KEY_DERIVATION_PATH => {
-        self.get_child_private_keys_from_derivation_path(path[1..].to_vec())
+        self.get_child_private_keys_from_derivation_path(path[1..].to_vec())?
       }
-      _ => println!("Unknown derivation path"),
+      _ => return Err(WalletError::UnknownDerivationPath),
     }
+
+    Ok(())
   }
 
   fn get_child_private_keys_from_derivation_path(
     &mut self,
     derivation_path_vector: Vec<&str>,
-  ) -> () {
-    let parent_private_key_bytes = hex::decode(self.master_keys.private_key.clone()).unwrap();
-    let parent_public_key_bytes = hex::decode(self.master_keys.public_key.clone()).unwrap();
-    let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone()).unwrap();
+  ) -> Result<()> {
+    let parent_private_key_bytes = hex::decode(self.master_keys.private_key.clone())?;
+    let parent_public_key_bytes = hex::decode(self.master_keys.public_key.clone())?;
+    let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone())?;
 
     let mut dpath_string = PathBuf::new();
     dpath_string.push(PRIVATE_KEY_DERIVATION_PATH);
 
     for depth in 0..derivation_path_vector.len() {
-      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth]);
+      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth])?;
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_prv_key = self.current_private_key.clone();
@@ -417,7 +461,7 @@ impl Wallet {
         curr_chain_code,
         index,
         self.depth,
-      );
+      )?;
 
       // updates current private key, public key and chain code
       self.current_chain_code = child_keys.child_chain_code;
@@ -436,20 +480,22 @@ impl Wallet {
         hex::encode(child_keys.zprv.decode(child_keys.zprv.encode()).key),
       );
     }
+
+    Ok(())
   }
 
   fn get_child_public_keys_from_derivation_path(
     &mut self,
     derivation_path_vector: Vec<&str>,
-  ) -> () {
-    let parent_public_key_bytes = hex::decode(self.master_keys.public_key.clone()).unwrap();
-    let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone()).unwrap();
+  ) -> Result<()> {
+    let parent_public_key_bytes = hex::decode(self.master_keys.public_key.clone())?;
+    let parent_chain_code_bytes = hex::decode(self.master_keys.chain_code.clone())?;
 
     let mut dpath_string = PathBuf::new();
     dpath_string.push(PUBLIC_KEY_DERIVATION_PATH);
 
     for depth in 0..derivation_path_vector.len() {
-      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth]);
+      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth])?;
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_chain_code = self.current_chain_code.clone();
@@ -465,7 +511,7 @@ impl Wallet {
       }
 
       let child_keys =
-      bip32::ckd_public_parent_to_public_child_key(curr_pub_key, curr_chain_code, index, self.depth);
+      bip32::ckd_public_parent_to_public_child_key(curr_pub_key, curr_chain_code, index, self.depth)?;
 
       // updates current public key and chain code
       self.current_chain_code = child_keys.child_chain_code;
@@ -482,5 +528,7 @@ impl Wallet {
         hex::encode(child_keys.zpub.decode(child_keys.zpub.encode()).key),
       );
     }
+
+    Ok(())
   }
 }
