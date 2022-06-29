@@ -6,5 +6,6 @@ Feel free to correct me on anything. As always, I'm here to learn and the only t
 
 ## To-Do:
 - [x] Base58Check;
-- [ ] Bip32 and Wallet error handling;
+- [x] Bip32 and Wallet error handling;
+- [ ] Transactions.
 
