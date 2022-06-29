@@ -82,6 +82,7 @@ impl Base58Check {
     let data_with_checksum_as_bytes = hex::decode(&data_with_checksum).unwrap();
     let mut data_with_checksum_as_decimal =
       BigInt::from_bytes_be(Sign::Plus, &data_with_checksum_as_bytes);
+
     // encode to base58
     let mut encoded: Vec<String> = Vec::new();
     loop {
@@ -91,6 +92,7 @@ impl Base58Check {
       encoded.push(String::from(
         BASE58_CHARSET[(remainder.to_signed_bytes_be()[0]) as usize],
       ));
+      
       if data_with_checksum_as_decimal <= BigInt::from(0u8) {
         break;
       }
