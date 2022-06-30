@@ -12,6 +12,12 @@ const MAIN_NET_BASE58_PRV_KEY_WIF_VERSION: &str = "80"; // 0x80
 // const TEST_NET_BASE58_PRV_KEY_WIF_VERSION: &str = "EF"; // 0xEF
 const PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED: &str = "01"; // 0x01
 
+#[derive(Clone, Debug)]
+pub enum PublicKeyType {
+  Compressed,
+  Uncompressed,
+}
+
 /// Base58Check is a way of representing data in Bitcoin that is widely used to represent
 /// Public and Private Keys.
 ///
@@ -21,22 +27,22 @@ const PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED: &str = "01"; // 0x01
 pub struct Base58Check {}
 
 impl Base58Check {
-  /// Encodes private key WIF compressed in Base58Check representation for the Bitcoin Mainnet.
+  /// Encodes private key WIF (Wallet Import Format) compressed in Base58Check representation for the Bitcoin Mainnet.
   ///
   /// ```rust
   /// let base58_check = base58check::Base58Check{};
   ///
   /// let private_key_wif_compressed = "4604b4b710fe91f584fff084e1a9159fe4f8408fff380596a604948474ce4fa3".to_owned();
-  /// let base58check_private_key_wif_compressed = encode_private_key_wif_compressed(private_key);
+  /// let base58check_private_key_wif_compressed = encode_private_key_wif(private_key, PublicKeyType::Compressed);
   ///
   /// assert_eq!(base58check_private_key_wif_compressed, "KyZpNDKnfs94vbrwhJneDi77V6jF64PWPF8x5cdJb8ifgg2DUc9d".to_owned());
   /// ```
-  pub fn encode_private_key_wif_compressed(&self, data: String) -> String {
-    // Adds version at the beginning of private key and adds 0x01 at the end because the K is uncompressed.
-    let data = format!(
-      "{}{}{}",
-      MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data, PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED
-    );
+  pub fn encode_private_key_wif(&self, data: String, public_key_type: PublicKeyType) -> String {
+    // Adds version at the beginning of private key and, if public key is compressed, adds 0x01 at the end.
+    let data = match public_key_type {
+      PublicKeyType::Uncompressed => format!("{}{}", MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data),
+      PublicKeyType::Compressed => format!("{}{}{}", MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data, PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED),
+    };   
 
     // gets checksum
     let checksum = self.get_checksum(data.clone());
@@ -102,8 +108,6 @@ impl Base58Check {
     encoded.reverse();
     // join it
     let encoded: String = encoded.join("");
-
-    println!("Base58Check: {}", encoded);
 
     encoded
   }
