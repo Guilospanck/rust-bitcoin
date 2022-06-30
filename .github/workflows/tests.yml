@@ -7,8 +7,13 @@ on:
   pull_request:
 
 jobs:
-  unit-tests:
-    name: Run Unit Tests
+  tests:
+    name: Run Tests
+    env:
+      PROJECT_NAME_UNDERSCORE: btc
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
+      RUSTDOCFLAGS: -Cpanic=abort
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,12 +27,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Setup Rust
-    - name: Setup Rust
+    # Setup Toolchain
+    - name: Setup Toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
         override: true
+
+    # Setup Rust
+    - name: Setup Rust
+      run: |
+        rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
+        rustup override set ${{ matrix.toolchain }}
+
+    # Build 
+    - name: Build
+      run: cargo build $CARGO_OPTIONS
 
     # cache
     - name: Configure cache
@@ -41,6 +56,17 @@ jobs:
           target/
         key: test-${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
-    # tests
-    - name: Run tests
-      run: cargo test --tests
+    # tests and coverage
+    - name: Generate test result and coverage report
+        run: |
+          cargo install grcov;
+          cargo test $CARGO_OPTIONS --tests;
+          zip -0 ccov.zip `find . \( -name "$PROJECT_NAME_UNDERSCORE*.gc*" \) -print`;
+          grcov ccov.zip -s . -t lcov --llvm --ignore-not-existing --ignore "/*" -o lcov.info;
+
+    # Upload to CodeCov
+    - name: Upload to CodeCov
+      uses: codecov/codecov-action@v1
+      with:
+        files: ./lcov.info
+        fail_ci_if_error: true
