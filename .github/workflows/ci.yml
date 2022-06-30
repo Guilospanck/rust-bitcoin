@@ -34,4 +34,4 @@ jobs:
       if: matrix.rust == 'beta' || matrix.rust == 'stable'
     # tests
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --tests
