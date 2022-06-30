@@ -35,12 +35,6 @@ jobs:
         toolchain: ${{ matrix.rust }}
         override: true
 
-    # Setup Rust
-    - name: Setup Rust
-      run: |
-        rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
-        rustup override set ${{ matrix.toolchain }}
-
     # Build 
     - name: Build
       run: cargo build $CARGO_OPTIONS
