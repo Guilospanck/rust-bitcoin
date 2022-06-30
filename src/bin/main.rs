@@ -40,7 +40,7 @@ fn _merkle_root_transactions() {
   let _merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
 }
 
-fn test_pow() {
+fn _pow() {
   println!("Mining block...");
   let start = Instant::now();
 
@@ -70,7 +70,7 @@ fn test_pow() {
   println!("Block mined: {:?}", block_header);
 }
 
-fn test_target_representation() {
+fn _target_representation() {
   let genesis_bits = 486_604_799;
   helpers::get_target_representation(genesis_bits);
   let bits_block_739421 = 386_492_960;
@@ -81,7 +81,7 @@ fn test_target_representation() {
   helpers::get_target_representation(bits_block_277_316);
 }
 
-fn test_merkle_root() {
+fn _merkle_root() {
   let hashed_transactions: Vec<String> = vec![
     "8c14f0db3df150123e6f3dbbf30f8b955a8249b62ac1d1ff16284aefa3d06d87".to_owned(),
     "fff2525b8931402dd09222c50775608f75787bd2b87e56995a7bdd30f79702c4".to_owned(),
@@ -93,7 +93,7 @@ fn test_merkle_root() {
   println!("root {}", merkle_root);
 }
 
-fn test_generate_bech32m_address() {
+fn _generate_bech32m_address() {
   let my_wallet = wallet::Wallet::new();
   let private_key_generated = my_wallet.generate_private_key();
 
@@ -112,9 +112,13 @@ fn test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, 
   let hash160_as_vec_u8 = hex::decode(&hash160_public_key).unwrap();
   let hash160_as_base32 = helpers::convert_bits(8, 5, hash160_as_vec_u8);
 
+  println!("{}", hash160_public_key);
+
   // witness version
   let mut witness_version_plus_hash160 = vec![witness_version];
   witness_version_plus_hash160.extend_from_slice(&hash160_as_base32);
+
+  println!("{:?}", witness_version_plus_hash160);
 
   let bech32 = Bech32::new(MAIN_NET_BTC.to_owned(), witness_version_plus_hash160);
   let encoded = bech32.encode(encoding_type);
@@ -133,11 +137,11 @@ fn test_decode_bech32m_address(){
 
 
 fn main() {
-  let mut my_wallet = wallet::Wallet::new();
+  // let mut my_wallet = wallet::Wallet::new();
 
   // Bip 84 test vector
-  let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
-  let seed = my_wallet.seed_from_mnemonic(mnemonic, None);
+  // let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
+  // let seed = my_wallet.seed_from_mnemonic(mnemonic, None);
 
   // BIP 32 test vector 1
   // let seed = "000102030405060708090a0b0c0d0e0f".to_owned();
@@ -148,11 +152,11 @@ fn main() {
   // println!("\nSeed: {}", seed);
 
   println!();
-  println!("Chain m:");
+  // println!("Chain m:");
 
-  my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
+  // my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap());
   
-  my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
+  // my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
   // my_wallet.get_keys_from_derivation_path("M/84/0/0/0/0");
 
   // Bip 84 test vector
@@ -166,13 +170,13 @@ fn main() {
   // let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
 
   // BIP 32 test vector 2
-  let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
-  let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
-  let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
+  // let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
+  // let master_public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+  // let master_chain_code = "60499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd9689".to_owned();
 
-  let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
-  let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
-  let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
+  // let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
+  // let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
+  // let master_chain_code_bytes = hex::decode(&master_chain_code).unwrap();
   
   // =========== private parent key -> private child key derivation =================
   println!();
@@ -194,17 +198,13 @@ fn main() {
   // println!("Chain M/0':");
   // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 2_147_483_648); // 2^31
 
-  // println!("Chain M/0:");
+  // println!("Chain M/0:");  
   // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
 
-
-  // ========================= Test address ===================================
-  // test_encode_bech32m_address(
-  //   helpers::get_hash160("0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned()),
-  //   0u8,
-  //   EncodingType::BECH32
-  // );
-
-  // ================================= Test Base58Check ========================
+  test_encode_bech32m_address(
+    helpers::get_hash160("0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned()),
+    1u8,
+    EncodingType::BECH32M
+  );
   
 }
