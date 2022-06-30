@@ -2,7 +2,7 @@ use crate::helpers::convert_bits;
 use std::result;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum Bech32Error {
   #[error("Invalid length")]
   InvalidLength,
@@ -57,13 +57,13 @@ pub struct Bech32 {
   pub payload: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Bech32Decoded {
   pub hrp: String,
   pub payload: Payload,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Payload {
   pub witness_version: String,
   pub program: String,
