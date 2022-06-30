@@ -8,6 +8,7 @@ use sha256;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::path::PathBuf;
+use std::fmt::Write as _; // import without risk of name clashing
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -235,7 +236,7 @@ pub fn get_hash160(data: String) -> String {
 pub fn convert_bits(from: u8, to: u8, data_bytes: Vec<u8>) -> Vec<u8> {
   let mut bits = String::new();
   for byte in data_bytes {
-    bits.push_str(&format!("{:0from$b}", byte, from = from as usize));
+    let _ = write!(bits, "{:0from$b}", byte, from = from as usize);
   }
 
   let divisible_by_to = (bits.len() % (to as usize)) == 0;
