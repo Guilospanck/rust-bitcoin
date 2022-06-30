@@ -53,21 +53,21 @@ type Result<T> = result::Result<T, Bech32Error>;
 ///
 #[derive(Clone, Debug)]
 pub struct Bech32 {
-  hrp: String,
-  payload: Vec<u8>,
+  pub hrp: String,
+  pub payload: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Bech32Decoded {
-  hrp: String,
-  payload: Payload,
+  pub hrp: String,
+  pub payload: Payload,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Payload {
-  witness_version: String,
-  program: String,
-  checksum: String,
+  pub witness_version: String,
+  pub program: String,
+  pub checksum: String,
 }
 
 impl Bech32Decoded {
@@ -172,7 +172,7 @@ impl Bech32 {
       return Err(Bech32Error::MissingSeparator);
     }
 
-    let separated_data: Vec<&str> = address.split(SEPARATOR).collect();
+    let separated_data: Vec<&str> = address.splitn(2, SEPARATOR).collect();
     let hrp: &str = separated_data[0];
 
     let payload: &str = separated_data[1];
@@ -191,6 +191,10 @@ impl Bech32 {
     // Get witness version as base32 byte (0, 1, 2...16)
     let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
     let witness_version_length = witness_version.to_string().len();
+
+    if witness_version < 0 || witness_version > 16 {
+      return Err(Bech32Error::InvalidWitnessVersion);
+    }
 
     // Get 5 bits representation of payload ({witness_version}{program}{checksum})
     let mut payload_bytes = Vec::<u8>::new();
@@ -270,10 +274,6 @@ fn validates_and_get_base32_representation_of_payload(
 }
 
 fn validate_decode(witness_version: i8, program_as_8_bits: Vec<u8>) -> Result<()> {
-  if witness_version < 0 || witness_version > 16 {
-    return Err(Bech32Error::InvalidWitnessVersion);
-  }
-
   // validate 2 - 40 groups
   if program_as_8_bits.len() < 2 || program_as_8_bits.len() > 40 {
     return Err(Bech32Error::InvalidProgramLength);
