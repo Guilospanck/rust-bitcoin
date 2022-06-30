@@ -7,5 +7,9 @@ Feel free to correct me on anything. As always, I'm here to learn and the only t
 ## To-Do:
 - [x] Base58Check;
 - [x] Bip32 and Wallet error handling;
-- [ ] Transactions.
+- [x] Bech32 tests
+- [x] Base58Check tests
+
+## Study
+- [ ] Transactions
 

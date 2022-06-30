@@ -20,7 +20,7 @@ use crate::transaction::Transaction;
 ///  - `Difficulty Target (in decimal format)` = In contrast, the difficulty target is the *target* hash of the most recent block of transactions.
 ///
 ///  When the two values are divided, it yields a whole number which is the difficulty level of mining Bitcoin.
-const DIFFICULTY_LEVEL: f32 = 1.00;
+// const DIFFICULTY_LEVEL: f32 = 1.00;
 const _MAX_BITS: u32 = 486_604_799; // Genesis Block Bits = 0x1d00ffff
 
 const MAX_NONCE: u32 = 4_294_967_295; // 32 bits 2^32 -1
@@ -59,7 +59,7 @@ pub fn get_target_representation(bits: u32) -> String {
   }
 
   let pow_formula = pow(BigUint::from(2u8), target_two_pow as usize); // 2 ^(8*(exponent-3)
-  let target = BigUint::from(decimal_coefficient * pow_formula); // target = coefficient * 2 ^(8*(exponent-3))
+  let target = decimal_coefficient * pow_formula; // target = coefficient * 2 ^(8*(exponent-3))
   let target = format!("{:x}", target);
   let hexa_length = target.len();
   let mut zeros = "".to_owned();
@@ -70,8 +70,7 @@ pub fn get_target_representation(bits: u32) -> String {
   }
   zeros.push_str(&target);
 
-  let target = zeros;
-  target
+  zeros
 }
 
 /// Gets the merkle root from a set of transactions.
@@ -90,7 +89,7 @@ pub fn get_target_representation(bits: u32) -> String {
 /// ```
 ///
 pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> String {
-  if transactions.len() == 0 {
+  if transactions.is_empty() {
     return "".to_owned();
   }
 
@@ -103,9 +102,7 @@ pub fn get_transactions_merkle_root(transactions: &mut Vec<Transaction>) -> Stri
     })
     .collect();
 
-  let merkle_root = build_merkle_root(hashed_transactions);
-
-  merkle_root
+  build_merkle_root(hashed_transactions)
 }
 
 /// Helper function to build a merkle root from a vector of hashed transactions.
@@ -167,7 +164,7 @@ pub fn build_merkle_root(hashed_transactions: Vec<String>) -> String {
 /// When the whole nonce spectrum is used and a valid hash isn't found, it then
 /// updates the block timestamp and tries again.
 ///
-pub fn mine_block(block_header: &mut BlockHeader) -> () {
+pub fn mine_block(block_header: &mut BlockHeader) {
   let target = get_target_representation(block_header.bits);
   let target_as_bytes = hex::decode(&target).unwrap();
   let target_as_decimal = BigInt::from_bytes_be(Sign::Plus, &target_as_bytes);
@@ -179,7 +176,7 @@ pub fn mine_block(block_header: &mut BlockHeader) -> () {
 
     let hash = sha256::digest(&stringfied);
 
-    let decimal_hash = BigInt::parse_bytes(&hash.as_bytes(), 16).unwrap();
+    let decimal_hash = BigInt::parse_bytes(hash.as_bytes(), 16).unwrap();
 
     if decimal_hash <= target_as_decimal {
       return;
@@ -227,9 +224,7 @@ pub fn ripemd160_hasher(data: String) -> String {
 /// 
 pub fn get_hash160(data: String) -> String {
   let hashed_256 = sha256::digest_bytes(&hex::decode(&data).unwrap());
-  let ripemd160_hashed = ripemd160_hasher(hashed_256);
-
-  ripemd160_hashed
+  ripemd160_hasher(hashed_256)
 }
 
 /// Converts a vector of bytes from a representation to another.
@@ -294,8 +289,7 @@ pub fn get_pbkdf2_sha512(password: String, salt: String) -> String {
   let mut seed = [0u8; PBKDF2_DERIVED_KEY_LENGTH_BYTES];
   pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, PBKDF2_ITERATION_COUNT, &mut seed);
 
-  let seed = format!("{}", hex::encode(seed));
-  seed
+  hex::encode(seed)
 }
 
 /// Helper function to read from a file and return its contents
@@ -323,14 +317,11 @@ pub fn read_from_a_file_to_a_vec_string(path: String) -> std::io::Result<Vec<Str
 
 /// Simple helper function to print the derivation path that is currently
 /// being solved.
-pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) -> () {
+pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) {
   println!("===========================");
   dpath_string.push(format!("{}", index));
   println!(
     "{}",
-    match dpath_string.to_str() {
-      Some(data) => data,
-      None => "",
-    }
+    dpath_string.to_str().unwrap_or(""),
   );
 }

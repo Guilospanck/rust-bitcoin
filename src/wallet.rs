@@ -228,10 +228,10 @@ impl Wallet {
     match bech32.encode(bech32::EncodingType::BECH32M) {
       Ok(encoded) => {
         println!("Bech32m encoded: {}", encoded);
-        return Ok(encoded);
+        Ok(encoded)
       }
       Err(error) => {
-        return Err(WalletError::Bech32Error(error.to_string()));
+        Err(WalletError::Bech32Error(error.to_string()))
       }
     }
   }
@@ -254,10 +254,10 @@ impl Wallet {
     match bech32m.decode(bech32m_address) {
       Ok(decoded) => {
         println!("Bech32m decoded: {:?}", decoded);
-        return Ok(decoded);
+        Ok(decoded)
       }
       Err(error) => {
-        return Err(WalletError::Bech32Error(error.to_string()));
+        Err(WalletError::Bech32Error(error.to_string()))
       }
     }
   }
@@ -413,7 +413,7 @@ impl Wallet {
     };
 
     // get vector of string splitted by slash
-    let path: Vec<&str> = path.split("/").collect();
+    let path: Vec<&str> = path.split('/').collect();
     match path[0] {
       PUBLIC_KEY_DERIVATION_PATH => {
         self.get_child_public_keys_from_derivation_path(path[1..].to_vec())?
@@ -438,15 +438,15 @@ impl Wallet {
     let mut dpath_string = PathBuf::new();
     dpath_string.push(PRIVATE_KEY_DERIVATION_PATH);
 
-    for depth in 0..derivation_path_vector.len() {
-      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth])?;
+    for item in &derivation_path_vector {
+      let index = bip32::get_normal_or_hardened_index(item)?;
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_prv_key = self.current_private_key.clone();
       let mut curr_chain_code = self.current_chain_code.clone();
       let mut curr_pub_key = self.current_public_key.clone();
       // updates depth
-      self.depth = self.depth + 1;
+      self.depth += 1;
 
       if self.depth == 1 {
         // if first level, parent keys are master keys
@@ -494,15 +494,15 @@ impl Wallet {
     let mut dpath_string = PathBuf::new();
     dpath_string.push(PUBLIC_KEY_DERIVATION_PATH);
 
-    for depth in 0..derivation_path_vector.len() {
-      let index = bip32::get_normal_or_hardened_index(derivation_path_vector[depth])?;
+    for item in &derivation_path_vector {
+      let index = bip32::get_normal_or_hardened_index(item)?;
       print_derivation_path(&mut dpath_string, index);
 
       let mut curr_chain_code = self.current_chain_code.clone();
       let mut curr_pub_key = self.current_public_key.clone();
 
       // updates depth
-      self.depth = self.depth + 1;
+      self.depth += 1;
 
       if self.depth == 1 {
         // if first level, parent keys are master keys

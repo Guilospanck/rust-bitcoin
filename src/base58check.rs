@@ -93,7 +93,7 @@ impl Base58Check {
     let mut encoded: Vec<String> = Vec::new();
     loop {
       let remainder: BigInt = data_with_checksum_as_decimal.clone() % 58;
-      data_with_checksum_as_decimal = data_with_checksum_as_decimal / BigInt::from(58u8);
+      data_with_checksum_as_decimal /= BigInt::from(58u8);
 
       encoded.push(String::from(
         BASE58_CHARSET[(remainder.to_signed_bytes_be()[0]) as usize],
@@ -125,7 +125,7 @@ impl Base58Check {
   /// assert_eq!(checksum_private_key, "2aebdbb8".to_owned());
   /// ```
   fn get_checksum(&self, data: String) -> String {
-    let data_hashed_160 = sha256::digest_bytes(&hex::decode(&data.clone()).unwrap());
+    let data_hashed_160 = sha256::digest_bytes(&hex::decode(&data).unwrap());
     let data_double_hashed_160 = sha256::digest_bytes(&hex::decode(&data_hashed_160).unwrap());
     let checksum = &data_double_hashed_160[..8];
 

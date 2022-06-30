@@ -230,7 +230,7 @@ pub fn ckd_private_parent_to_private_child_key(
   let extended_private_key = ExtendedPrivateKey {
     chain_code: hex::decode(&child_chain_code)?,
     key: hex::decode(&child_private_key)?,
-    depth: depth,
+    depth,
     parent_key_fingerprint: get_fingerprint(hex::encode(&parent_public_key))?,
     child_number: index,
   };
@@ -318,7 +318,7 @@ pub fn ckd_public_parent_to_public_child_key(
   let extended_public_key = ExtendedPublicKey {
     chain_code: parent_chain_code,
     key: child_public_key.clone().serialize().to_vec(),
-    depth: depth,
+    depth,
     parent_key_fingerprint: get_fingerprint(hex::encode(&public_parent_key))?,
     child_number: index,
   };
@@ -342,8 +342,8 @@ pub fn ckd_public_parent_to_public_child_key(
 /// ```
 ///  
 pub fn get_normal_or_hardened_index(index: &str) -> Result<u32> {
-  if index.contains("'") {
-    let index: Vec<&str> = index.split("'").collect();
+  if index.contains('\'') {
+    let index: Vec<&str> = index.split('\'').collect();
     let u32_index = index[0].parse::<u32>()?;
     let base: u32 = 2;
     return Ok(base.pow(31) + u32_index);

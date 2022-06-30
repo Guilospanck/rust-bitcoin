@@ -144,7 +144,7 @@ impl Bech32 {
     encoded.push(SEPARATOR);
 
     let hrp_bytes: Vec<u8> = self.hrp.clone().into_bytes();
-    let checksum = create_checksum(&hrp_bytes, &self.payload, encoding_type.clone());
+    let checksum = create_checksum(&hrp_bytes, &self.payload, encoding_type);
 
     let mut combined = self.payload.clone();
     combined.extend_from_slice(&checksum);
@@ -189,10 +189,10 @@ impl Bech32 {
     let hrp_bytes = hrp.to_owned().into_bytes();
 
     // Get witness version as base32 byte (0, 1, 2...16)
-    let witness_version = get_base32_byte_representation(payload.chars().nth(0).unwrap());
+    let witness_version = get_base32_byte_representation(payload.chars().next().unwrap());
     let witness_version_length = witness_version.to_string().len();
 
-    if witness_version < 0 || witness_version > 16 {
+    if !(0..=16).contains(&witness_version) {
       return Err(Bech32Error::InvalidWitnessVersion);
     }
 
@@ -244,7 +244,7 @@ fn validates_and_get_base32_representation_of_payload(
 
   for b in payload.bytes() {
     // Aphanumeric only
-    if !((b >= b'0' && b <= b'9') || (b >= b'A' && b <= b'Z') || (b >= b'a' && b <= b'z')) {
+    if !((b'0'..=b'9').contains(&b) || (b'A'..=b'Z').contains(&b) || (b'a'..=b'z').contains(&b)) {
       return Err(Bech32Error::InvalidChar);
     }
     // Excludes these characters: [1,b,i,o]
@@ -252,12 +252,12 @@ fn validates_and_get_base32_representation_of_payload(
       return Err(Bech32Error::InvalidChar);
     }
     // Lowercase
-    if b >= b'a' && b <= b'z' {
+    if (b'a'..=b'z').contains(&b) {
       has_lower = true;
     }
     let mut c = b;
     // Uppercase
-    if b >= b'A' && b <= b'Z' {
+    if (b'A'..=b'Z').contains(&b) {
       has_upper = true;
       // Convert to lowercase
       c = b + (b'a' - b'A');
@@ -319,14 +319,10 @@ fn get_encoding_const(encoding: EncodingType) -> u32 {
   match encoding {
     EncodingType::BECH32 => BECH32_CONST,
     EncodingType::BECH32M => BECH32M_CONST,
-    _ => {
-      println!("Error: encoding is not valid.");
-      return 0;
-    }
   }
 }
 
-fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -> Vec<u8> {
+fn create_checksum(hrp: &[u8], data: &[u8], encoding_type: EncodingType) -> Vec<u8> {
   let mut values: Vec<u8> = hrp_expand(hrp);
   values.extend_from_slice(data);
 
@@ -337,7 +333,7 @@ fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -
 
   let mut checksum: Vec<u8> = Vec::new();
   for p in 0..6 {
-    checksum.push(((plm >> 5 * (5 - p)) & 0x1f) as u8);
+    checksum.push(((plm >> (5 * (5 - p))) & 0x1f) as u8);
   }
   checksum
 }
@@ -347,13 +343,13 @@ fn create_checksum(hrp: &Vec<u8>, data: &Vec<u8>, encoding_type: EncodingType) -
 ///   - `hrp`: human-readable part as Vec<u8> bytes.
 ///   - `payload`: address payload made of {witness_version}{program}{checksum}
 ///   - `encoding_type`: BECH32 (0x01) or BECH32M (0x2bc830a3) constants.
-fn verify_checksum(hrp: &Vec<u8>, payload: &Vec<u8>, encoding_type: EncodingType) -> bool {
+fn verify_checksum(hrp: &[u8], payload: &[u8], encoding_type: EncodingType) -> bool {
   let mut exp = hrp_expand(hrp);
   exp.extend_from_slice(payload);
   polymod(exp) == get_encoding_const(encoding_type)
 }
 
-fn hrp_expand(hrp: &Vec<u8>) -> Vec<u8> {
+fn hrp_expand(hrp: &[u8]) -> Vec<u8> {
   let mut v: Vec<u8> = Vec::new();
   for b in hrp {
     v.push(*b >> 5);
@@ -374,9 +370,9 @@ fn polymod(values: Vec<u8>) -> u32 {
   for v in values {
     top = (chk >> 25) as u8;
     chk = (chk & 0x1ffffff) << 5 ^ (v as u32);
-    for i in 0..5 {
+    for (i, item) in GEN.iter().enumerate() {
       if ((top >> i) & 1) == 1 {
-        chk ^= GEN[i];
+        chk ^= item;
       }
     }
   }

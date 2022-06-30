@@ -59,7 +59,7 @@ const MNEMONIC_STRING: &str = "mnemonic";
 pub fn generate_mnemonic_from_entropy(entropy: Vec<u8>) -> Result<Vec<String>> {
   let entropy_length = entropy.len() * 8;
 
-  if entropy_length < 128 || entropy_length > 256 {
+  if !(128..=256).contains(&entropy_length) {
     return Err(Bip39Error::EntropyOutOfBonds);
   }
 

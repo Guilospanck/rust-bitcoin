@@ -1,10 +1,10 @@
-use crate::block::{Block, BlockHeader};
-use crate::helpers;
-use crate::transaction::Transaction;
-use chrono::prelude::*;
+// use crate::block::{Block};
+// use crate::helpers;
+// use crate::transaction::Transaction;
+// use chrono::prelude::*;
 
 pub struct Blockchain {
-  blocks: Vec<Block>,
+  // blocks: Vec<Block>,
 }
 
 // impl Blockchain {

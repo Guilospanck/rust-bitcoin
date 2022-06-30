@@ -105,11 +105,13 @@ fn _generate_bech32m_address() {
   let private_key_bytes = hex::decode(&sha256_dec_private_key).unwrap();
 
   let public_key = my_wallet.get_public_key_from_private_key(private_key_bytes);
-  my_wallet.generate_bech32m_address_from_public_key(hex::encode(public_key));
+  match my_wallet.generate_bech32m_address_from_public_key(hex::encode(public_key)) {
+    Ok(addr) => println!("{}", addr),
+    Err(err) => eprintln!("{}", err),
+  };
 }
 
-fn test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, encoding_type: EncodingType) {
-  let hash160_public_key = "0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned();
+fn _test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, encoding_type: EncodingType) {
   let hash160_as_vec_u8 = hex::decode(&hash160_public_key).unwrap();
   let hash160_as_base32 = helpers::convert_bits(8, 5, hash160_as_vec_u8);
 
@@ -126,7 +128,7 @@ fn test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, 
   println!("{:?}", encoded);
 }
 
-fn test_decode_bech32m_address(){
+fn _test_decode_bech32m_address(){
   let bech32m_address = String::from("bc1qw0za5zsr6tggqwmnruzzg2a5pnkjlzaus8upyg"); // bech32
   // let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
   // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
