@@ -16,12 +16,6 @@ jobs:
       RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
       RUSTDOCFLAGS: -Cpanic=abort
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - stable
-          - beta
-          - nightly
 
     steps:
     # Checkout repository
@@ -32,7 +26,8 @@ jobs:
     - name: Setup Toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: ${{ matrix.rust }}
+        profile: minimal
+        toolchain: nightly
         override: true
 
     # Build 
