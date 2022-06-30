@@ -44,7 +44,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: test-${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+        key: test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.lock') }}
 
     # tests and coverage
     - name: Generate test result and coverage report
