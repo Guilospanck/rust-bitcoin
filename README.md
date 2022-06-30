@@ -1,4 +1,4 @@
-# rust-bitcoin
+# rust-bitcoin [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Guilospanck/rust-bitcoin/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Guilospanck/rust-bitcoin/tree/main)
 Bitcoin protocol implementation in Rust.
 Feel free to correct me on anything. As always, I'm here to learn and the only thing that matters is the truth.
 
