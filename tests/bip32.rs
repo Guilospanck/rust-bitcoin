@@ -26,9 +26,12 @@ fn get_index0() -> Sut {
 }
 
 fn get_index1() -> Sut {
-  let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
-  let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
-  let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
+  let master_private_key =
+    "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
+  let master_public_key =
+    "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
+  let master_chain_code =
+    "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
 
   let master_private_key_bytes = hex::decode(&master_private_key).unwrap();
   let master_public_key_bytes = hex::decode(&master_public_key).unwrap();
@@ -45,8 +48,56 @@ fn make_sut(index: u8) -> Sut {
   match index {
     0 => get_index0(),
     1 => get_index1(),
-    _ => get_index0()
+    _ => get_index0(),
   }
+}
+
+#[test]
+fn test_bip32_should_encode_pvd_key_correctly() {
+  let zprv = bip32::ExtendedPrivateKey {
+    chain_code: [
+      240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112,
+      157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156,
+    ].to_vec(),
+    key: [
+      171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211,
+      120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30,
+    ].to_vec(),
+    depth: 1,
+    parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
+    child_number: 0,
+  };
+
+  let expected = "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e".to_owned();
+
+  let result = zprv.encode();
+
+  assert_eq!(hex::encode(result), expected)
+}
+
+#[test]
+fn test_bip32_should_decode_pvd_key_correctly() {
+  let zprv_encoded = [4, 178, 67, 12, 1, 189, 22, 190, 229, 0, 0, 0, 0, 240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112, 157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156, 0, 171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211, 120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30];
+
+  let expected_decoded_zprv = bip32::ExtendedPrivateKey {
+    chain_code: [
+      240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112,
+      157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156,
+    ].to_vec(),
+    key: [
+      171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211,
+      120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30,
+    ].to_vec(),
+    depth: 1,
+    parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
+    child_number: 0,
+  };
+
+  let zprv = bip32::ExtendedPrivateKey { ..Default::default() };  
+
+  let result = zprv.decode(zprv_encoded);
+
+  assert_eq!(result, expected_decoded_zprv)
 }
 
 #[test]
@@ -69,6 +120,8 @@ fn test_bip32_should_derive_child_pvd_key_from_parent_pvd_key_m0() {
     0,
     1,
   );
+
+  println!("{:?}", child_keys0.as_ref().unwrap().zprv);
 
   assert_eq!(
     child_keys0.as_ref().unwrap().child_private_key,
@@ -96,19 +149,11 @@ fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_big_m_0() {
   let sut0 = make_sut(0);
   let sut1 = make_sut(1);
 
-  let child_keys0 = bip32::ckd_public_parent_to_public_child_key(
-    sut0.public_key,
-    sut0.chain_code,
-    0,
-    1,
-  );
+  let child_keys0 =
+    bip32::ckd_public_parent_to_public_child_key(sut0.public_key, sut0.chain_code, 0, 1);
   //
-  let child_keys1 = bip32::ckd_public_parent_to_public_child_key(
-    sut1.public_key,
-    sut1.chain_code,
-    0,
-    1,
-  );
+  let child_keys1 =
+    bip32::ckd_public_parent_to_public_child_key(sut1.public_key, sut1.chain_code, 0, 1);
 
   assert_eq!(
     child_keys0.as_ref().unwrap().child_public_key,

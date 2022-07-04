@@ -51,7 +51,7 @@ pub struct ChildPublicKeyChainCodeAndzpub {
   pub zpub: ExtendedPublicKey,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ExtendedPublicKey {
   /// Current chain code
   pub chain_code: Vec<u8>,
@@ -98,7 +98,7 @@ impl ExtendedPublicKey {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ExtendedPrivateKey {
   /// Current chain code
   pub chain_code: Vec<u8>,
