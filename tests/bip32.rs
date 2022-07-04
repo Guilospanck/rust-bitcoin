@@ -92,7 +92,7 @@ fn test_bip32_should_derive_child_pvd_key_from_parent_pvd_key_m0() {
 }
 
 #[test]
-fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_M0() {
+fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_big_m_0() {
   let sut0 = make_sut(0);
   let sut1 = make_sut(1);
 

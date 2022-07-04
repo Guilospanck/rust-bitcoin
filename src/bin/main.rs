@@ -138,7 +138,7 @@ fn _test_decode_bech32m_address(){
 }
 
 fn main() {
-  let mut my_wallet = wallet::Wallet::new();
+  // let mut my_wallet = wallet::Wallet::new();
 
   // Bip 84 test vector
   // let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
@@ -166,9 +166,9 @@ fn main() {
   // let master_chain_code = "7923408dadd3c7b56eed15567707ae5e5dca089de972e07f3b860450e2a3b70e".to_owned();
 
   // BIP 32 test vector 1
-  let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
-  let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
-  let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
+  // let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
+  // let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
+  // let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
 
   // BIP 32 test vector 2
   // let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
@@ -192,16 +192,16 @@ fn main() {
   // =========== public parent key -> public child key derivation =================
   println!();
 
-  my_wallet.master_keys.private_key = master_private_key;
-  my_wallet.master_keys.public_key = master_public_key;
-  my_wallet.master_keys.chain_code = master_chain_code;
+  // my_wallet.master_keys.private_key = master_private_key;
+  // my_wallet.master_keys.public_key = master_public_key;
+  // my_wallet.master_keys.chain_code = master_chain_code;
 
-  // error because K -> K not defined for hardened keys
-  println!("Chain M/0':");
+  // // error because K -> K not defined for hardened keys
+  // println!("Chain M/0':");
   // my_wallet.get_keys_from_derivation_path("M/0'");
 
-  println!("Chain M/0:");
-  my_wallet.get_keys_from_derivation_path("M/0");
+  // println!("Chain M/0:");
+  // my_wallet.get_keys_from_derivation_path("M/0");
 
   // ===================== Bech32 addresses ==================================
 
