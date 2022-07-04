@@ -250,3 +250,13 @@ fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_big_m_0() {
   );
   assert_eq!(hex::encode(child_keys1.as_ref().unwrap().zpub.encode()), "04b24746013442193e00000000873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508027c4b09ffb985c298afe7e5813266cbfcb7780b480ac294b0b43dc21f2be3d13c");
 }
+
+#[test]
+/** Get normal or hardened keys */
+fn test_bip32_should_get_normal_or_hardened_index_correctly() {
+  let hardened_index = bip32::get_normal_or_hardened_index("84'"); // hardened
+  let non_hardened_index = bip32::get_normal_or_hardened_index("84"); // non-hardened
+  
+  assert_eq!(hardened_index.unwrap(), 2_147_483_732u32); // 2^31 + 84
+  assert_eq!(non_hardened_index.unwrap(), 84u32); 
+}
