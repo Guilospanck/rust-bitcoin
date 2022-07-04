@@ -185,9 +185,15 @@ impl ExtendedPrivateKey {
 /// master_private_key_bytes, master_public_key_bytes,
 /// master_chain_code_bytes, 0, 1);
 ///
-/// assert_eq!(Ok(child_keys.child_private_key), hex::decode("abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e").unwrap());
-/// assert_eq!(Ok(child_keys.child_chain_code), hex::decode("f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c").unwrap());
-/// assert_eq!(hex::encode(Ok(child_keys.zprv.encode())), "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
+/// assert_eq!(
+/// child_keys.as_ref().unwrap().child_private_key,
+/// hex::decode("abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e").unwrap()
+/// );
+/// assert_eq!(
+/// child_keys.as_ref().unwrap().child_chain_code,
+/// hex::decode("f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c").unwrap()
+/// );
+/// assert_eq!(hex::encode(child_keys.as_ref().unwrap().zprv.encode()), "04b2430c01bd16bee500000000f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c00abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e");
 /// ```
 ///
 pub fn ckd_private_parent_to_private_child_key(

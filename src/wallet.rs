@@ -91,9 +91,9 @@ pub struct Wallet {
 
 #[derive(Debug, Default)]
 pub struct MasterKeys {
-  private_key: String,
-  public_key: String,
-  chain_code: String,
+  pub private_key: String,
+  pub public_key: String,
+  pub chain_code: String,
 }
 
 impl MasterKeys {

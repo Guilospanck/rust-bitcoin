@@ -137,10 +137,8 @@ fn _test_decode_bech32m_address(){
   println!("{:?}", decoded);
 }
 
-
-
 fn main() {
-  // let mut my_wallet = wallet::Wallet::new();
+  let mut my_wallet = wallet::Wallet::new();
 
   // Bip 84 test vector
   // let mnemonic: Vec<String> = ["abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "abandon".to_owned(), "about".to_owned()].to_vec();
@@ -168,9 +166,9 @@ fn main() {
   // let master_chain_code = "7923408dadd3c7b56eed15567707ae5e5dca089de972e07f3b860450e2a3b70e".to_owned();
 
   // BIP 32 test vector 1
-  // let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
-  // let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
-  // let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
+  let master_private_key = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35".to_owned();
+  let master_public_key = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2".to_owned();
+  let master_chain_code = "873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508".to_owned();
 
   // BIP 32 test vector 2
   // let master_private_key = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e".to_owned();
@@ -184,25 +182,28 @@ fn main() {
   // =========== private parent key -> private child key derivation =================
   println!();
 
-  // println!("Chain m/84':");
-  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes, 2_147_483_732);
-
   // println!("Chain m/0:");
-  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 0);
-
-  // println!("Chain m/0':");
-  // my_wallet.ckd_private_parent_to_private_child_key(master_private_key_bytes, master_chain_code_bytes.clone(), 2_147_483_648); // 2^31
+  // my_wallet.master_keys.private_key = master_private_key;
+  // my_wallet.master_keys.public_key = master_public_key;
+  // my_wallet.master_keys.chain_code = master_chain_code;
+  // my_wallet.get_keys_from_derivation_path("m/0");
 
   
   // =========== public parent key -> public child key derivation =================
   println!();
 
-  // error because K -> K not defined for hardened keys
-  // println!("Chain M/0':");
-  // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 2_147_483_648); // 2^31
+  my_wallet.master_keys.private_key = master_private_key;
+  my_wallet.master_keys.public_key = master_public_key;
+  my_wallet.master_keys.chain_code = master_chain_code;
 
-  // println!("Chain M/0:");  
-  // my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0);
+  // error because K -> K not defined for hardened keys
+  println!("Chain M/0':");
+  // my_wallet.get_keys_from_derivation_path("M/0'");
+
+  println!("Chain M/0:");
+  my_wallet.get_keys_from_derivation_path("M/0");
+
+  // ===================== Bech32 addresses ==================================
 
   // test_encode_bech32m_address(
   //   helpers::get_hash160("0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned()),
