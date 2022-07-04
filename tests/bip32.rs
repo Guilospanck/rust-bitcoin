@@ -256,7 +256,6 @@ fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_big_m_0() {
 fn test_bip32_should_get_normal_or_hardened_index_correctly() {
   let hardened_index = bip32::get_normal_or_hardened_index("84'"); // hardened
   let non_hardened_index = bip32::get_normal_or_hardened_index("84"); // non-hardened
-  
   assert_eq!(hardened_index.unwrap(), 2_147_483_732u32); // 2^31 + 84
-  assert_eq!(non_hardened_index.unwrap(), 84u32); 
+  assert_eq!(non_hardened_index.unwrap(), 84u32);
 }

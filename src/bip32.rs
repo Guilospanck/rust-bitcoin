@@ -375,11 +375,24 @@ pub fn get_normal_or_hardened_index(index: &str) -> Result<u32> {
 /// let public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
 /// let fingerprint = my_wallet.get_fingerprint(public_key);
 ///
-/// assert_eq!(Ok(fingerprint), [189, 22, 190, 229]);
+/// assert_eq!(fingerprint.unwrap(), [189, 22, 190, 229]);
 /// ```
 ///
 fn get_fingerprint(public_key: String) -> Result<Vec<u8>> {
   let hash160 = get_hash160(public_key);
   let hash_bytes = hex::decode(&hash160)?;
   Ok(hash_bytes[..4].to_vec()) // fingerprint is the first 32 bits
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_bip32_should_get_fingerprint_correctly() {
+    let public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+    let fingerprint = get_fingerprint(public_key);
+  
+    assert_eq!(fingerprint.unwrap(), [189, 22, 190, 229]);
+  }
 }
