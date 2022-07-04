@@ -1,5 +1,6 @@
 use btc::bip32;
 
+/** System Under Test - Helpers */
 struct Sut {
   private_key: Vec<u8>,
   public_key: Vec<u8>,
@@ -52,17 +53,20 @@ fn make_sut(index: u8) -> Sut {
   }
 }
 
+/** Extended Private Keys: zprv */
 #[test]
 fn test_bip32_should_encode_pvd_key_correctly() {
   let zprv = bip32::ExtendedPrivateKey {
     chain_code: [
       240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112,
       157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156,
-    ].to_vec(),
+    ]
+    .to_vec(),
     key: [
       171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211,
       120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30,
-    ].to_vec(),
+    ]
+    .to_vec(),
     depth: 1,
     parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
     child_number: 0,
@@ -77,29 +81,99 @@ fn test_bip32_should_encode_pvd_key_correctly() {
 
 #[test]
 fn test_bip32_should_decode_pvd_key_correctly() {
-  let zprv_encoded = [4, 178, 67, 12, 1, 189, 22, 190, 229, 0, 0, 0, 0, 240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112, 157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156, 0, 171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211, 120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30];
+  let zprv_encoded = [
+    4, 178, 67, 12, 1, 189, 22, 190, 229, 0, 0, 0, 0, 240, 144, 154, 255, 170, 126, 231, 171, 229,
+    221, 78, 16, 5, 152, 212, 220, 83, 205, 112, 157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47,
+    124, 156, 0, 171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170,
+    27, 211, 120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30,
+  ];
 
   let expected_decoded_zprv = bip32::ExtendedPrivateKey {
     chain_code: [
       240, 144, 154, 255, 170, 126, 231, 171, 229, 221, 78, 16, 5, 152, 212, 220, 83, 205, 112,
       157, 90, 92, 44, 172, 64, 231, 65, 47, 35, 47, 124, 156,
-    ].to_vec(),
+    ]
+    .to_vec(),
     key: [
       171, 231, 74, 152, 246, 199, 234, 190, 224, 66, 143, 83, 121, 143, 10, 184, 170, 27, 211,
       120, 115, 153, 144, 65, 112, 60, 116, 47, 21, 172, 126, 30,
-    ].to_vec(),
+    ]
+    .to_vec(),
     depth: 1,
     parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
     child_number: 0,
   };
 
-  let zprv = bip32::ExtendedPrivateKey { ..Default::default() };  
+  let zprv = bip32::ExtendedPrivateKey {
+    ..Default::default()
+  };
 
   let result = zprv.decode(zprv_encoded);
 
   assert_eq!(result, expected_decoded_zprv)
 }
 
+/** Extended Public Keys: zpub */
+#[test]
+fn test_bip32_should_encode_pub_key_correctly() {
+  let zpub = bip32::ExtendedPublicKey {
+    chain_code: [
+      96, 73, 159, 128, 27, 137, 109, 131, 23, 154, 67, 116, 174, 183, 130, 42, 174, 172, 234, 160,
+      219, 31, 133, 238, 62, 144, 76, 77, 239, 189, 150, 137,
+    ]
+    .to_vec(),
+    key: [
+      2, 252, 158, 90, 240, 172, 141, 155, 60, 236, 254, 42, 136, 142, 33, 23, 186, 61, 8, 157,
+      133, 133, 136, 108, 156, 130, 107, 107, 34, 169, 141, 18, 234,
+    ]
+    .to_vec(),
+    depth: 1,
+    parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
+    child_number: 0,
+  };
+
+  let expected = "04b2474601bd16bee50000000060499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd968902fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea".to_owned();
+
+  let result = zpub.encode();
+
+  assert_eq!(hex::encode(result), expected)
+}
+
+#[test]
+fn test_bip32_should_decode_pub_key_correctly() {
+  let zpub_encoded = [
+    4, 178, 71, 70, 1, 189, 22, 190, 229, 0, 0, 0, 0, 96, 73, 159, 128, 27, 137, 109, 131, 23, 154,
+    67, 116, 174, 183, 130, 42, 174, 172, 234, 160, 219, 31, 133, 238, 62, 144, 76, 77, 239, 189,
+    150, 137, 2, 252, 158, 90, 240, 172, 141, 155, 60, 236, 254, 42, 136, 142, 33, 23, 186, 61, 8,
+    157, 133, 133, 136, 108, 156, 130, 107, 107, 34, 169, 141, 18, 234,
+  ];
+
+  let expected_zpub_decoded = bip32::ExtendedPublicKey {
+    chain_code: [
+      96, 73, 159, 128, 27, 137, 109, 131, 23, 154, 67, 116, 174, 183, 130, 42, 174, 172, 234, 160,
+      219, 31, 133, 238, 62, 144, 76, 77, 239, 189, 150, 137,
+    ]
+    .to_vec(),
+    key: [
+      2, 252, 158, 90, 240, 172, 141, 155, 60, 236, 254, 42, 136, 142, 33, 23, 186, 61, 8, 157,
+      133, 133, 136, 108, 156, 130, 107, 107, 34, 169, 141, 18, 234,
+    ]
+    .to_vec(),
+    depth: 1,
+    parent_key_fingerprint: [189, 22, 190, 229].to_vec(),
+    child_number: 0,
+  };
+
+  let zpub = bip32::ExtendedPublicKey {
+    ..Default::default()
+  };
+
+  let result = zpub.decode(zpub_encoded);
+
+  assert_eq!(result, expected_zpub_decoded)
+}
+
+/** Child Key Derivation k -> k */
 #[test]
 fn test_bip32_should_derive_child_pvd_key_from_parent_pvd_key_m0() {
   let sut0 = make_sut(0);
@@ -144,6 +218,7 @@ fn test_bip32_should_derive_child_pvd_key_from_parent_pvd_key_m0() {
   assert_eq!(hex::encode(child_keys1.as_ref().unwrap().zprv.encode()), "04b2430c013442193e00000000d323f1be5af39a2d2f08f5e8f664633849653dbe329802e9847cfc85f8d7b52a004e2cdcf2f14e802810e878cf9e6411fc4e712edf19a06bcfcc5d5572e489a3b7");
 }
 
+/** Child Key Derivation K -> K */
 #[test]
 fn test_bip32_should_derive_child_pub_key_from_parent_pub_key_big_m_0() {
   let sut0 = make_sut(0);
