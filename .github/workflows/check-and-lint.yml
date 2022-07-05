@@ -14,8 +14,8 @@ jobs:
       matrix:
         rust:
           - stable
-          - beta
-          - nightly
+          # - beta
+          # - nightly
     steps:
     # Checkout repository
     - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - beta
+          # - beta
 
     steps:
     - uses: actions/checkout@v2
