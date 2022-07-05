@@ -3,7 +3,7 @@ use std::result;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum Bip39Error {
   #[error("IO error: `{0}`")]
   IOError(String),
