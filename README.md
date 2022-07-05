@@ -5,10 +5,7 @@ Feel free to correct me on anything. As always, I'm here to learn and the only t
 <center><b>(Under Construction 🚧)</b></center>
 
 ## To-Do:
-- [x] Base58Check;
-- [x] Bip32 and Wallet error handling;
-- [x] Bech32 tests
-- [x] Base58Check tests
+- [ ] Tests Coverage ^ 85%
 
 ## Study
 - [ ] Transactions
