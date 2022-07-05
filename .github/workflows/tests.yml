@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/coverage
   pull_request:
 
 jobs:
@@ -56,7 +55,7 @@ jobs:
 
     # Upload to CodeCov
     - name: Upload to CodeCov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         files: ./lcov.info
         fail_ci_if_error: true
