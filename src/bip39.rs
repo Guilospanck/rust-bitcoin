@@ -134,7 +134,13 @@ pub fn generate_mnemonic_from_entropy(entropy: Vec<u8>) -> Result<Vec<String>> {
 /// Example:
 /// ```rust
 /// let my_wallet = wallet::Wallet {};
-/// let mnemonic: Vec<String> = &["army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media", "make", "crunch"].to_vec();
+/// let mnemonic: Vec<_> = vec![
+/// "army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media",
+/// "make", "crunch",
+/// ]
+/// .into_iter()
+/// .map(String::from)
+/// .collect();
 ///
 /// let seed = my_wallet.get_seed_from_mnemonic(mnemonic, None);
 ///
