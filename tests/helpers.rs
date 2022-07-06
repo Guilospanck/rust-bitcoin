@@ -64,7 +64,7 @@ fn test_helpers_hmac_sha512_hasher() {
 
 #[test]
 fn test_helpers_ripemd160_hasher() {
-  let data = hex::encode("potato".to_owned());
+  let data = hex::encode("potato");
   let expected = "73320299f79b130c89172044d653a932d456cb96".to_owned();
 
   let result = helpers::ripemd160_hasher(data);
@@ -85,7 +85,7 @@ fn test_helpers_should_return_err_invalid_hex_character() {
 
 #[test]
 fn test_helpers_get_hash160() {
-  let data = hex::encode("potato".to_owned());
+  let data = hex::encode("potato");
   let expected = "6f07d42c1f3a221c69718f8da628425dbf0b84e4".to_owned();
 
   let result = helpers::get_hash160(data);
@@ -116,7 +116,7 @@ fn test_helpers_get_pbkdf2_sha512() {
   .collect();
   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
-  let salt = format!("{}", MNEMONIC_STRING);
+  let salt = format!("{}", MNEMONIC_STRING.to_owned());
   let normalized_salt = salt.nfkd().to_string();
 
   let seed = helpers::get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
