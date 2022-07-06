@@ -116,7 +116,7 @@ fn test_helpers_get_pbkdf2_sha512() {
   .collect();
   let normalized_mnemonic: Vec<String> = mnemonic.iter().map(|w| w.nfkd().to_string()).collect();
   let stringfied_mnemonic: String = normalized_mnemonic.join(" ");
-  let salt = format!("{}", MNEMONIC_STRING.to_owned());
+  let salt = MNEMONIC_STRING.to_string();
   let normalized_salt = salt.nfkd().to_string();
 
   let seed = helpers::get_pbkdf2_sha512(stringfied_mnemonic, normalized_salt);
