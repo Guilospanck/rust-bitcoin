@@ -354,7 +354,7 @@ impl Wallet {
   /// ```
   ///
   pub fn create_master_keys_from_seed(&mut self, seed: Vec<u8>) -> Result<()> {
-    let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.as_bytes().to_vec(), seed.clone());
+    let seed_as_sha512 = hmac_sha512_hasher(HMAC_SHA512_KEY.as_bytes().to_vec(), seed);
     let master_private_key = &seed_as_sha512[..64]; // left half
     let master_private_key_bytes = hex::decode(&master_private_key)?;
 
