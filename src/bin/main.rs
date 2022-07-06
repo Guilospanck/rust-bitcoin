@@ -129,7 +129,8 @@ fn _test_encode_bech32m_address(hash160_public_key: String, witness_version: u8,
 }
 
 fn _test_decode_bech32m_address(){
-  let bech32m_address = String::from("bc1qw0za5zsr6tggqwmnruzzg2a5pnkjlzaus8upyg"); // bech32
+  let bech32m_address = String::from("bc1phq8vedlv7w3cetla7l3f3xcd8xuw0cvevn0lpw"); // bech32m
+  // let bech32m_address = String::from("bc1qw0za5zsr6tggqwmnruzzg2a5pnkjlzaus8upyg"); // bech32
   // let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
   // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
   let bech32m = Bech32::empty();
@@ -206,9 +207,9 @@ fn main() {
   // ===================== Bech32 addresses ==================================
 
   // test_encode_bech32m_address(
-  //   helpers::get_hash160("0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c".to_owned()),
-  //   0u8,
-  //   EncodingType::BECH32
+  //   helpers::get_hash160("0313e8842189afb5316c3c1acfcca696a85ec3741d17767f953bc70394b3839365".to_owned()),
+  //   1u8,
+  //   EncodingType::BECH32M
   // );
 
   // test_decode_bech32m_address();
