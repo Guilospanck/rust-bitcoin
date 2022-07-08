@@ -14,6 +14,18 @@ pub type Account = String;
 /// Outputs (UTXOs) are discrete and indivisble units of value, denominated in 
 /// integer Satoshis. An UTXO can only be consumed in its entirety by a transaction.
 /// 
+/// Fees:
+/// Transactions fees are calculated based on the size of the transactions in
+/// kilobytes (KB), not on the value of the transaction in BTC. The unit used generally
+/// is satoshi/byte.
+/// 
+/// BTC Script Language:
+/// It uses Stack in order to push, pop and evaluate expressions. And it is evaluated from 
+/// left to right.
+/// In BTC transactions, it combines:
+///       Unlocking Script + Locking Script
+/// And then evaluates then. If the result is true, the transaction is valid. Otherwise, is not.
+/// 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Transaction {
   pub from: Account,
@@ -33,7 +45,7 @@ pub struct Transaction {
 /// - sequence: locktime of disabled.
 /// 
 /// Serialization:
-/// - 32 bytes           | Transaction Hash      | Pointer to the transaction containing the UTXO to be spent
+/// - 32 bytes (little endian)           | Transaction Hash      | Pointer to the transaction containing the UTXO to be spent
 /// - 4 bytes            | Output Index          | The index number of the UTXO to be spent
 /// - 1-9 bytes (VarInt) | Unlocking-Script Size | Unlocking-Script size length in bytes
 /// - Variable           | Unlocking-Script      | A script that fulfills the conditions of the UTXO locking script
@@ -43,7 +55,7 @@ pub struct Transaction {
 pub struct Vin {
   txid: String,
   vout: u32,
-  script_sig: String,
+  script_sig: String, // script sig, witness, unlocking script
   sequence: u32
 }
 
@@ -63,5 +75,5 @@ pub struct Vin {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Vout {
   pub value: i32, // in satoshis
-  pub script_pub_key: String // cryptographic puzzle
+  pub script_pub_key: String // cryptographic puzzle, witness script, locking script
 }
