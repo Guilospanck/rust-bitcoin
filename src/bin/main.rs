@@ -1,6 +1,6 @@
 use btc::helpers;
 use btc::wallet;
-use btc::{BlockHeader, Transaction};
+use btc::{BlockHeader};
 use btc::bech32::{Bech32, MAIN_NET_BTC, EncodingType};
 use chrono::prelude::*;
 use sha256::digest;
@@ -29,16 +29,16 @@ fn _chrono_date() {
   let _timestamp = utc.timestamp() as u32;
 }
 
-fn _merkle_root_transactions() {
-  let first_transaction = Transaction {
-    from: "COINBASE".to_owned(),
-    to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
-    amount: 50.0,
-  };
+// fn _merkle_root_transactions() {
+//   let first_transaction = Transaction {
+//     from: "COINBASE".to_owned(),
+//     to: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_owned(),
+//     amount: 50.0,
+//   };
 
-  let mut transactions = vec![first_transaction];
-  let _merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
-}
+//   let mut transactions = vec![first_transaction];
+//   let _merkle_root = helpers::get_transactions_merkle_root(&mut transactions);
+// }
 
 fn _pow() {
   println!("Mining block...");

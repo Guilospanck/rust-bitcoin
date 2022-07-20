@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-pub type Account = String;
-
 /// Transactions in BTC work like currency inside your wallet.
 /// If you have, for example, US$ 2.00 in your wallet and you
 /// want to pay for some coffee that costs US$ 2.00, you'd just
@@ -11,7 +9,7 @@ pub type Account = String;
 /// you 2 dollar bill.
 /// That's the same with transactions.
 /// 
-/// Outputs (UTXOs) are discrete and indivisble units of value, denominated in 
+/// Outputs (UTXOs) are discrete and indivisible units of value, denominated in 
 /// integer Satoshis. An UTXO can only be consumed in its entirety by a transaction.
 /// 
 /// Fees:
@@ -28,9 +26,10 @@ pub type Account = String;
 /// 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Transaction {
-  pub from: Account,
-  pub to: Account,
-  pub amount: f32,
+  version: i32,
+  vins: Vec<Vin>,
+  vouts: Vec<Vout>,
+  locktime: u32
 }
 
 /// Transaction Input (Vin)
@@ -42,14 +41,14 @@ pub struct Transaction {
 /// - vout: which UTXO from that transaction is going to be used (index).
 /// - script_sig: a script that satisfies the conditions placed on the 
 ///         UTXO, unlocking it for spending.
-/// - sequence: locktime of disabled.
+/// - sequence: locktime or disabled.
 /// 
 /// Serialization:
 /// - 32 bytes (little endian)           | Transaction Hash      | Pointer to the transaction containing the UTXO to be spent
-/// - 4 bytes            | Output Index          | The index number of the UTXO to be spent
-/// - 1-9 bytes (VarInt) | Unlocking-Script Size | Unlocking-Script size length in bytes
-/// - Variable           | Unlocking-Script      | A script that fulfills the conditions of the UTXO locking script
-/// - 4 bytes            | Sequence Number       | Used for locktime or disabled (0xFFFFFFFF)
+/// - 4 bytes                            | Output Index          | The index number of the UTXO to be spent
+/// - 1-9 bytes (VarInt)                 | Unlocking-Script Size | Unlocking-Script size length in bytes
+/// - Variable                           | Unlocking-Script      | A script that fulfills the conditions of the UTXO locking script
+/// - 4 bytes                            | Sequence Number       | Used for locktime or disabled (0xFFFFFFFF)
 /// 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Vin {
@@ -63,6 +62,9 @@ pub struct Vin {
 /// It's produced in every transaction and will have
 /// the amount sent to some address and the change (if any)
 /// that will return to the sender. It's described as an array.
+/// 
+/// Full nodes track all UTXOs from a set. Every transaction
+/// represents a change in the UTXO set.
 /// 
 /// - value: value of the UTXO in satoshis (10^-8 BTC)
 /// - script_pub_key: defines the necessary conditions to spend the output
