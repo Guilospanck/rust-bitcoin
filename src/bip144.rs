@@ -16,9 +16,3 @@
 pub fn serialize() {
 
 }
-
-pub fn encode_vout(vout: Vout) {
-  let amount_bytes_le = vout.value.to_le_bytes();
-  let script_size: usize = vout.script_pub_key.as_bytes().len();
-  let script_size_bytes = script_size.to_le_bytes();
-}

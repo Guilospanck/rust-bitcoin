@@ -79,3 +79,9 @@ pub struct Vout {
   pub value: i32, // in satoshis
   pub script_pub_key: String // cryptographic puzzle, witness script, locking script
 }
+
+pub fn serialize_vout(vout: Vout) {
+  let amount_bytes_le = vout.value.to_le_bytes();
+  let script_size: usize = vout.script_pub_key.as_bytes().len();
+  let script_size_bytes = script_size.to_le_bytes();
+}
