@@ -3,12 +3,12 @@ use hmac::{Hmac, Mac};
 use num::pow::pow;
 use num_bigint::{BigInt, BigUint, Sign};
 use ripemd::{Digest, Ripemd160};
-use sha2::{Sha512};
+use sha2::Sha512;
 use sha256;
+use std::fmt::Write as _;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
-use std::path::PathBuf;
-use std::fmt::Write as _; // import without risk of name clashing
+use std::path::PathBuf; // import without risk of name clashing
 
 use crate::block::BlockHeader;
 use crate::transaction::Transaction;
@@ -192,15 +192,15 @@ pub fn mine_block(block_header: &mut BlockHeader) {
   mine_block(block_header);
 }
 
-/// Gets the HMAC-SHA512 one way hashing representation of 
+/// Gets the HMAC-SHA512 one way hashing representation of
 /// some data using some key.
 /// It returns the representation in a string hexadecimal format.
-/// 
+///
 pub fn hmac_sha512_hasher(key: Vec<u8>, data: Vec<u8>) -> String {
   type HmacSha512 = Hmac<Sha512>;
 
-  let mut data_as_hmacsha512 = HmacSha512::new_from_slice(&key)
-    .expect("Something went wrong with HMAC-Sha512 hashing");
+  let mut data_as_hmacsha512 =
+    HmacSha512::new_from_slice(&key).expect("Something went wrong with HMAC-Sha512 hashing");
   data_as_hmacsha512.update(&data);
   let result = data_as_hmacsha512.finalize();
 
@@ -222,7 +222,7 @@ pub fn ripemd160_hasher(data: String) -> String {
 
 /// Gets the HASH160 (`RIPEMD160(SHA256(K))`) of some hexadecimal data
 /// and returns its hashed data in the hex format.
-/// 
+///
 pub fn get_hash160(data: String) -> String {
   let hashed_256 = sha256::digest_bytes(&hex::decode(&data).unwrap());
   ripemd160_hasher(hashed_256)
@@ -321,8 +321,13 @@ pub fn read_from_a_file_to_a_vec_string(path: String) -> std::io::Result<Vec<Str
 pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) {
   println!("===========================");
   dpath_string.push(format!("{}", index));
-  println!(
-    "{}",
-    dpath_string.to_str().unwrap_or(""),
-  );
+  println!("{}", dpath_string.to_str().unwrap_or(""),);
+}
+
+/// Simple helper to get the Little Endian representation of
+/// a Hexadecimal string.
+pub fn hex_to_le_bytes(hex_value: String) -> String {
+  let mut hex_value_in_bytes = hex::decode(&hex_value).unwrap();
+  hex_value_in_bytes.reverse();
+  hex::encode(hex_value_in_bytes)  
 }

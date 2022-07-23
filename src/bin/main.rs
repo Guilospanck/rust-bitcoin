@@ -1,5 +1,6 @@
 use btc::helpers;
 use btc::wallet;
+use btc::transaction;
 use btc::{BlockHeader};
 use btc::bech32::{Bech32, MAIN_NET_BTC, EncodingType};
 use chrono::prelude::*;
@@ -139,5 +140,12 @@ fn _test_decode_bech32m_address(){
 }
 
 fn main() {
-  println!("Main");
+  let mut vin = transaction::Vin::new();
+  vin.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
+  vin.vout = 0;
+  vin.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
+  vin.sequence = 4294967295;
+
+  let serialized = vin.serialize();
+  println!("{}", serialized);
 }
