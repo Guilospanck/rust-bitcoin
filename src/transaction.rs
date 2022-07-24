@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::helpers;
+use serde::{Deserialize, Serialize};
 
 /// Transactions in BTC work like currency inside your wallet.
 /// If you have, for example, US$ 2.00 in your wallet and you
@@ -73,17 +73,13 @@ impl Vin {
     let txid_in_le_bytes_form = helpers::hex_to_le_bytes(self.txid.clone());
     let vout_4_bytes = hex::encode(self.vout.to_be_bytes());
 
-    let mut even_script_sig = self.script_sig.clone();
-    if self.script_sig.len() % 2 != 0 {
-      even_script_sig = format!("0{}", self.script_sig);
-    }
-    
-    let script_size = hex::decode(&even_script_sig).unwrap().len();
-    let script_size_hex = hex::encode(script_size.to_be_bytes());
-    
+    let script_size_bytes_no_empty_zeroes: Vec<u8> = helpers::get_even_hex_length_bytes(self.script_sig.clone());
+    let script_size_hex = hex::encode(script_size_bytes_no_empty_zeroes);
+
     let sequence_number_4_bytes = hex::encode(self.sequence.to_be_bytes());
 
-    format!("{}{}{}{}{}",
+    format!(
+      "{}{}{}{}{}",
       txid_in_le_bytes_form,
       vout_4_bytes,
       script_size_hex,
@@ -109,14 +105,26 @@ impl Vin {
 /// - 1-9 bytes (VarInt)      | Locking-Script Size | Locking-Script size in bytes
 /// - Variable                | Locking-Script      | Defines the conditions needed to spend the output
 ///
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Vout {
-  pub value: i32,             // in satoshis
+  pub value: i64,             // in satoshis
   pub script_pub_key: String, // cryptographic puzzle, witness script, locking script
 }
 
-pub fn _serialize_vout(vout: Vout) {
-  let _amount_bytes_le = vout.value.to_le_bytes();
-  let _script_size: usize = vout.script_pub_key.as_bytes().len();
-  let _script_size_bytes = _script_size.to_le_bytes();
+impl Vout {
+  pub fn new() -> Self {
+    Self {
+      value: Default::default(),
+      script_pub_key: Default::default(),
+    }
+  }
+
+  pub fn serialize(&self) -> String {
+    let amount_bytes_le = hex::encode(self.value.to_le_bytes());
+
+    let script_size_bytes_no_empty_zeroes: Vec<u8> = helpers::get_even_hex_length_bytes(self.script_pub_key.clone());
+    let script_size = hex::encode(script_size_bytes_no_empty_zeroes);
+
+    format!("{}{}{}", amount_bytes_le, script_size, self.script_pub_key,)
+  }
 }

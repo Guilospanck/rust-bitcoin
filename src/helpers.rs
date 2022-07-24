@@ -329,5 +329,25 @@ pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) {
 pub fn hex_to_le_bytes(hex_value: String) -> String {
   let mut hex_value_in_bytes = hex::decode(&hex_value).unwrap();
   hex_value_in_bytes.reverse();
-  hex::encode(hex_value_in_bytes)  
+  hex::encode(hex_value_in_bytes)
+}
+
+/// This helper will transform a hex string length into bytes,
+/// removing empty bytes.
+pub fn get_even_hex_length_bytes(hex_string: String) -> Vec<u8> {
+  let mut even_script_sig = hex_string.clone();
+  if hex_string.len() % 2 != 0 {
+    even_script_sig = format!("0{}", hex_string);
+  }
+
+  let script_size = hex::decode(&even_script_sig).unwrap().len();
+  let mut script_size_bytes_no_empty_zeroes: Vec<u8> = Vec::new();
+  for elem in script_size.to_be_bytes() {
+    if elem == 0 {
+      continue;
+    }
+    script_size_bytes_no_empty_zeroes.push(elem);
+  }
+
+  script_size_bytes_no_empty_zeroes
 }

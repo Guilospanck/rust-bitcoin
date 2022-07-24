@@ -1,8 +1,9 @@
+use btc::bech32::{Bech32, EncodingType, MAIN_NET_BTC};
 use btc::helpers;
-use btc::wallet;
 use btc::transaction;
-use btc::{BlockHeader};
-use btc::bech32::{Bech32, MAIN_NET_BTC, EncodingType};
+use btc::transaction::Vout;
+use btc::wallet;
+use btc::BlockHeader;
 use chrono::prelude::*;
 use sha256::digest;
 use std::time::Instant;
@@ -112,7 +113,11 @@ fn _generate_bech32m_address() {
   };
 }
 
-fn _test_encode_bech32m_address(hash160_public_key: String, witness_version: u8, encoding_type: EncodingType) {
+fn _test_encode_bech32m_address(
+  hash160_public_key: String,
+  witness_version: u8,
+  encoding_type: EncodingType,
+) {
   let hash160_as_vec_u8 = hex::decode(&hash160_public_key).unwrap();
   let hash160_as_base32 = helpers::convert_bits(8, 5, hash160_as_vec_u8);
 
@@ -129,11 +134,11 @@ fn _test_encode_bech32m_address(hash160_public_key: String, witness_version: u8,
   println!("{:?}", encoded);
 }
 
-fn _test_decode_bech32m_address(){
+fn _test_decode_bech32m_address() {
   let bech32m_address = String::from("bc1phq8vedlv7w3cetla7l3f3xcd8xuw0cvevn0lpw"); // bech32m
-  // let bech32m_address = String::from("bc1qw0za5zsr6tggqwmnruzzg2a5pnkjlzaus8upyg"); // bech32
-  // let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
-  // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
+                                                                                    // let bech32m_address = String::from("bc1qw0za5zsr6tggqwmnruzzg2a5pnkjlzaus8upyg"); // bech32
+                                                                                    // let bech32m_address = String::from("bc1p9vqzh88mmk4rdn5ytzeaz8y50rha0xq0tzetq3"); // bech32m
+                                                                                    // let bech32m_address = String::from("bc1q9vqzh88mmk4rdn5ytzeaz8y50rha0xq04q7vgc"); // bech32
   let bech32m = Bech32::empty();
   let decoded = bech32m.decode(bech32m_address);
   println!("{:?}", decoded);
@@ -147,5 +152,12 @@ fn main() {
   vin.sequence = 4294967295;
 
   let serialized = vin.serialize();
-  println!("{}", serialized);
+  println!("Vin serialized: {}\n", serialized);
+
+  let mut vout: Vout = transaction::Vout::new();
+  vout.value = 1_500_000; // in satoshis
+  vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+
+  let serialized = vout.serialize();
+  println!("Vout serialized: {}", serialized);
 }
