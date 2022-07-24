@@ -51,7 +51,7 @@ fn test_bip39_should_return_error_entropy_must_be_32_multiple() {
 }
 
 #[test]
-fn test_bip39_should_get_seed_from_mnemonic_correctly() {  
+fn test_bip39_should_get_seed_from_mnemonic_correctly() {
   let mnemonic: Vec<_> = vec![
     "army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media",
     "make", "crunch",

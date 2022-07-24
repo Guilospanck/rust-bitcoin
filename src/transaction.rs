@@ -73,7 +73,8 @@ impl Vin {
     let txid_in_le_bytes_form = helpers::hex_to_le_bytes(self.txid.clone());
     let vout_4_bytes = hex::encode(self.vout.to_be_bytes());
 
-    let script_size_bytes_no_empty_zeroes: Vec<u8> = helpers::get_even_hex_length_bytes(self.script_sig.clone());
+    let script_size_bytes_no_empty_zeroes: Vec<u8> =
+      helpers::get_even_hex_length_bytes(self.script_sig.clone());
     let script_size_hex = hex::encode(script_size_bytes_no_empty_zeroes);
 
     let sequence_number_4_bytes = hex::encode(self.sequence.to_be_bytes());
@@ -122,7 +123,8 @@ impl Vout {
   pub fn serialize(&self) -> String {
     let amount_bytes_le = hex::encode(self.value.to_le_bytes());
 
-    let script_size_bytes_no_empty_zeroes: Vec<u8> = helpers::get_even_hex_length_bytes(self.script_pub_key.clone());
+    let script_size_bytes_no_empty_zeroes: Vec<u8> =
+      helpers::get_even_hex_length_bytes(self.script_pub_key.clone());
     let script_size = hex::encode(script_size_bytes_no_empty_zeroes);
 
     format!("{}{}{}", amount_bytes_le, script_size, self.script_pub_key,)

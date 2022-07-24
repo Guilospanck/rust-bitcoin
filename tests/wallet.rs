@@ -147,10 +147,15 @@ fn test_wallet_should_create_master_keys_from_seed() {
 fn test_wallet_should_get_keys_from_derivation_path_m() {
   let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
   let mut my_wallet = wallet::Wallet::new();
-  my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap()).unwrap();
-  let expected_priv_key = hex::decode("759e246be4066c91c468ed3aee22d0116cac5b4c7e15eb050e2c937cd6723125").unwrap();
-  let expected_pub_key = hex::decode("02171456b4edec20748bfb8187d9fcef456c089ec46a032bcde6823ad772eb19a5").unwrap();
-  let expected_chain_code = hex::decode("1d0169359714f3e802804ccb787ae50c519ca7d2f5e29d1d58cef7abdc6b5470").unwrap();
+  my_wallet
+    .create_master_keys_from_seed(hex::decode(&seed).unwrap())
+    .unwrap();
+  let expected_priv_key =
+    hex::decode("759e246be4066c91c468ed3aee22d0116cac5b4c7e15eb050e2c937cd6723125").unwrap();
+  let expected_pub_key =
+    hex::decode("02171456b4edec20748bfb8187d9fcef456c089ec46a032bcde6823ad772eb19a5").unwrap();
+  let expected_chain_code =
+    hex::decode("1d0169359714f3e802804ccb787ae50c519ca7d2f5e29d1d58cef7abdc6b5470").unwrap();
 
   let result = my_wallet.get_keys_from_derivation_path("m/84'/0'/0'/0/0");
 
@@ -164,9 +169,13 @@ fn test_wallet_should_get_keys_from_derivation_path_m() {
 fn test_wallet_should_get_keys_from_derivation_path_uppercase_m() {
   let seed = "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".to_owned();
   let mut my_wallet = wallet::Wallet::new();
-  my_wallet.create_master_keys_from_seed(hex::decode(&seed).unwrap()).unwrap();
-  let expected_pub_key = hex::decode("03848fe3a93ebe80895aefe00d61b31fdd74492bc58ae275e3b31148a48676c5e6").unwrap();
-  let expected_chain_code = hex::decode("4961cdb27d4b93b5838002038a299f3894e31e64e88b8dca12262602456fd31a").unwrap();
+  my_wallet
+    .create_master_keys_from_seed(hex::decode(&seed).unwrap())
+    .unwrap();
+  let expected_pub_key =
+    hex::decode("03848fe3a93ebe80895aefe00d61b31fdd74492bc58ae275e3b31148a48676c5e6").unwrap();
+  let expected_chain_code =
+    hex::decode("4961cdb27d4b93b5838002038a299f3894e31e64e88b8dca12262602456fd31a").unwrap();
 
   let result = my_wallet.get_keys_from_derivation_path("M/84/0/0/0/0");
 
@@ -182,7 +191,10 @@ fn test_wallet_should_return_error_if_path_doesnt_start_with_either_lowercase_m_
   let result = my_wallet.get_keys_from_derivation_path("B/84'/0'/0'/0/0");
 
   assert!(result.is_err());
-  assert_eq!(result, Err(wallet::WalletError::DerivationPathMustBeginWithEithermOrM))
+  assert_eq!(
+    result,
+    Err(wallet::WalletError::DerivationPathMustBeginWithEithermOrM)
+  )
 }
 
 #[test]

@@ -1,5 +1,5 @@
+use crate::transaction::Transaction;
 use serde::{Deserialize, Serialize};
-use crate::transaction::{Transaction};
 
 pub type Timestamp = u32;
 

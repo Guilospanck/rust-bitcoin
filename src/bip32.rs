@@ -278,7 +278,7 @@ pub fn ckd_private_parent_to_private_child_key(
 /// // Chain M/0
 /// let child_keys = my_wallet.ckd_public_parent_to_public_child_key(master_public_key_bytes, master_chain_code_bytes, 0, 1);
 ///
-/// 
+///
 /// assert_eq!(
 /// child_keys0.as_ref().unwrap().child_public_key,
 /// hex::decode("02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea").unwrap()
@@ -288,7 +288,7 @@ pub fn ckd_private_parent_to_private_child_key(
 /// hex::decode("f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c").unwrap()
 /// );
 /// assert_eq!(hex::encode(child_keys0.as_ref().unwrap().zpub.encode()), "04b2474601bd16bee50000000060499f801b896d83179a4374aeb7822aaeaceaa0db1f85ee3e904c4defbd968902fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea");
-/// 
+///
 /// ```
 ///
 pub fn ckd_public_parent_to_public_child_key(
@@ -319,7 +319,8 @@ pub fn ckd_public_parent_to_public_child_key(
   // child public key = left_hmac_sha512 + parent_public_key
   // Gets left 256 bits of the HMAC-SHA512 as Public Key
   let secp = Secp256k1::new();
-  let sk = secp256k1::SecretKey::from_slice(&left_hmac_sha512).expect("32 bytes, within curve order");
+  let sk =
+    secp256k1::SecretKey::from_slice(&left_hmac_sha512).expect("32 bytes, within curve order");
   let mut child_public_key = PublicKey::from_secret_key(&secp, &sk);
 
   // Get the parent public key as Public Key (Struct from secp256k1 lib)
@@ -390,9 +391,10 @@ mod tests {
 
   #[test]
   fn test_bip32_should_get_fingerprint_correctly() {
-    let public_key = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
+    let public_key =
+      "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7".to_owned();
     let fingerprint = get_fingerprint(public_key);
-  
+
     assert_eq!(fingerprint.unwrap(), [189, 22, 190, 229]);
   }
 }

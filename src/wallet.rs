@@ -308,7 +308,7 @@ impl Wallet {
   /// ---
   /// Example:
   /// ```rust
-  /// 
+  ///
   /// let mnemonic: Vec<_> = vec![
   /// "army", "van", "defense", "carry", "jealous", "true", "garbage", "claim", "echo", "media",
   /// "make", "crunch",
@@ -317,14 +317,14 @@ impl Wallet {
   /// .map(String::from)
   /// .collect();
   /// let my_wallet = wallet::Wallet::new();
-  /// 
+  ///
   /// let seed = my_wallet.seed_from_mnemonic(mnemonic, None);
-  /// 
+  ///
   /// assert_eq!(
   /// seed,
   /// "5b56c417303faa3fcba7e57400e120a0ca83ec5a4fc9ffba757fbe63fbd77a89a1a3be4c67196f57c39a88b76373733891bfaba16ed27a813ceed498804c0570".to_owned()
   /// );
-  /// 
+  ///
   /// ```
   ///
   pub fn seed_from_mnemonic(&self, mnemonic: Vec<String>, passphrase: Option<String>) -> String {

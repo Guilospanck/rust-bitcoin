@@ -9,7 +9,7 @@ const BASE58_CHARSET: [char; 58] = [
 ];
 
 const MAIN_NET_BASE58_PRV_KEY_WIF_VERSION: &str = "80"; // 0x80
-// const TEST_NET_BASE58_PRV_KEY_WIF_VERSION: &str = "EF"; // 0xEF
+                                                        // const TEST_NET_BASE58_PRV_KEY_WIF_VERSION: &str = "EF"; // 0xEF
 const PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED: &str = "01"; // 0x01
 
 #[derive(Clone, Debug)]
@@ -21,7 +21,7 @@ pub enum PublicKeyType {
 /// Base58Check is a way of representing data in Bitcoin that is widely used to represent
 /// Public and Private Keys.
 ///
-/// See more at: https://en.bitcoin.it/wiki/Base58Check_encoding and 
+/// See more at: https://en.bitcoin.it/wiki/Base58Check_encoding and
 /// https://reference.cash/protocol/blockchain/encoding/base58check
 ///
 pub struct Base58Check {}
@@ -41,8 +41,11 @@ impl Base58Check {
     // Adds version at the beginning of private key and, if public key is compressed, adds 0x01 at the end.
     let data = match public_key_type {
       PublicKeyType::Uncompressed => format!("{}{}", MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data),
-      PublicKeyType::Compressed => format!("{}{}{}", MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data, PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED),
-    };   
+      PublicKeyType::Compressed => format!(
+        "{}{}{}",
+        MAIN_NET_BASE58_PRV_KEY_WIF_VERSION, data, PRV_KEY_CORRESPOND_TO_WIF_COMPRESSED
+      ),
+    };
 
     // gets checksum
     let checksum = self.get_checksum(data.clone());
@@ -57,11 +60,11 @@ impl Base58Check {
   ///
   /// ```rust
   /// let base58_check = base58check::Base58Check{};
-  /// 
+  ///
   /// // Extended public key
   /// let zpub = "04b24746037ef32bdb800000004a53a0ab21b9dc95869c4e92a161194e03c0ef3ff5014ac692f433c4765490fc02707a62fdacc26ea9b63b1c197906f56ee0180d0bcf1966e1a2da34f5f3a09a9b".to_owned();
   /// let base58check_zpub = base58_check.encode_extended_key(zpub);
-  /// 
+  ///
   /// // Extended private key
   /// let zprv = "04b2430c037ef32bdb800000004a53a0ab21b9dc95869c4e92a161194e03c0ef3ff5014ac692f433c4765490fc00e14f274d16ca0d91031b98b162618061d03930fa381af6d4caf44b01819ab6d4".to_owned();
   /// let base58check_zprv = base58_check.encode_extended_key(zprv);
@@ -69,12 +72,12 @@ impl Base58Check {
   /// assert_eq!(base58check_zpub, "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs".to_owned());
   /// assert_eq!(base58check_zprv, "zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE".to_owned());
   /// ```
-  /// 
+  ///
   pub fn encode_extended_key(&self, data: String) -> String {
     // gets checksum
     let checksum = self.get_checksum(data.clone());
 
-    let data_with_checksum = format!("{}{}", data, checksum);   
+    let data_with_checksum = format!("{}{}", data, checksum);
 
     // encodes to base58
     self.encode(data_with_checksum)
@@ -98,7 +101,7 @@ impl Base58Check {
       encoded.push(String::from(
         BASE58_CHARSET[(remainder.to_signed_bytes_be()[0]) as usize],
       ));
-      
+
       if data_with_checksum_as_decimal <= BigInt::from(0u8) {
         break;
       }

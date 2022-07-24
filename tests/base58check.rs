@@ -55,4 +55,3 @@ fn test_base58check_should_encode_extended_key_zpub() {
 
   assert_eq!(base58check_zpub, "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs".to_owned());
 }
-
