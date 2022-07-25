@@ -70,19 +70,19 @@ impl Vin {
   }
 
   /// Serializes a Vin.
-  /// 
+  ///
   /// ```rust
   /// let mut vin = transaction::Vin::new();
   /// vin.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
   /// vin.vout = 0;
   /// vin.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
   /// vin.sequence = 4294967295;
-  /// 
+  ///
   /// let serialized = vin.serialize();
   /// let expected = "186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779000000008b483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adfffffffff".to_owned();
   /// assert_eq!(serialized, expected);
   /// ```
-  /// 
+  ///
   pub fn serialize(&self) -> String {
     let txid_in_le_bytes_form = helpers::hex_to_le_bytes(self.txid.clone());
     let vout_4_bytes = hex::encode(self.vout.to_be_bytes());
@@ -135,7 +135,7 @@ impl Vout {
   }
 
   /// Vout serialize.
-  /// 
+  ///
   /// ```rust
   /// let mut vout: Vout = transaction::Vout::new();
   /// vout.value = 1_500_000; // in satoshis
@@ -143,10 +143,10 @@ impl Vout {
   ///
   /// let serialized = vout.serialize();
   /// let expected = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
-  /// 
+  ///
   /// assert_eq!(serialized, expected);
   /// ```
-  /// 
+  ///
   pub fn serialize(&self) -> String {
     let amount_bytes_le = hex::encode(self.value.to_le_bytes());
 
@@ -155,5 +155,37 @@ impl Vout {
     let script_size = hex::encode(script_size_bytes_no_empty_zeroes);
 
     format!("{}{}{}", amount_bytes_le, script_size, self.script_pub_key,)
+  }
+
+  pub fn deserialize(&self, vout_serialized: String) -> Self {
+    let amount_little_endian = vout_serialized[..16].to_owned(); // first 8 bytes
+    let amount_bytes: [u8; 8] = hex::decode(&amount_little_endian)
+      .unwrap()
+      .try_into()
+      .unwrap();
+    let amount = i64::from_le_bytes(amount_bytes);
+
+    // get script_pub_key (not happy in how this part is being written)
+    let rest_of_string_length = vout_serialized[16..].len();
+    let mut index = 2;
+    for length_of_script in (2..rest_of_string_length).step_by(2) {
+      let current_script_len = vout_serialized[16..(16 + length_of_script)].to_owned();
+      let length_decimal = i64::from_str_radix(&current_script_len, 16).unwrap();
+      let length_of_soon_to_be_script = vout_serialized[(16 + length_of_script)..].len() as i64;
+
+      if length_decimal == (length_of_soon_to_be_script / 2)
+        || length_decimal == ((length_of_soon_to_be_script + 1) / 2)
+      {
+        index = length_of_script;
+        break;
+      }
+    }
+
+    let script_pub_key = vout_serialized[(16 + index)..].to_owned();
+
+    Self {
+      value: amount,
+      script_pub_key,
+    }
   }
 }

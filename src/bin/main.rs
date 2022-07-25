@@ -159,4 +159,8 @@ fn main() {
 
   let serialized = vout.serialize();
   println!("Vout serialized: {}", serialized);
+
+  let vout = transaction::Vout::new();
+  let deserialized = vout.deserialize(serialized);
+  println!("{:?}", deserialized);
 }
