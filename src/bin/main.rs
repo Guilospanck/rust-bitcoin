@@ -1,7 +1,6 @@
 use btc::bech32::{Bech32, EncodingType, MAIN_NET_BTC};
 use btc::helpers;
 use btc::transaction;
-use btc::transaction::Vout;
 use btc::wallet;
 use btc::BlockHeader;
 use chrono::prelude::*;
@@ -154,7 +153,7 @@ fn main() {
   let serialized = vin.serialize();
   println!("Vin serialized: {}\n", serialized);
 
-  let mut vout: Vout = transaction::Vout::new();
+  let mut vout = transaction::Vout::new();
   vout.value = 1_500_000; // in satoshis
   vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
 

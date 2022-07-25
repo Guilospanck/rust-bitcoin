@@ -134,6 +134,19 @@ impl Vout {
     }
   }
 
+  /// Vout serialize.
+  /// 
+  /// ```rust
+  /// let mut vout: Vout = transaction::Vout::new();
+  /// vout.value = 1_500_000; // in satoshis
+  /// vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+  ///
+  /// let serialized = vout.serialize();
+  /// let expected = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+  /// 
+  /// assert_eq!(serialized, expected);
+  /// ```
+  /// 
   pub fn serialize(&self) -> String {
     let amount_bytes_le = hex::encode(self.value.to_le_bytes());
 
