@@ -134,8 +134,9 @@ impl Vout {
     }
   }
 
-  /// Vout serialize.
+  /// Vout serializer.
   ///
+  /// Example:
   /// ```rust
   /// let mut vout: Vout = transaction::Vout::new();
   /// vout.value = 1_500_000; // in satoshis
@@ -157,6 +158,16 @@ impl Vout {
     format!("{}{}{}", amount_bytes_le, script_size, self.script_pub_key,)
   }
 
+  /// Vout deserializer.
+  /// 
+  /// Example:
+  /// ```rust
+  /// let serialized = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+  /// let vout = transaction::Vout::new();
+  /// let deserialized = vout.deserialize(serialized);
+  /// println!("{:?}", deserialized);
+  /// ```
+  /// 
   pub fn deserialize(&self, vout_serialized: String) -> Self {
     let amount_little_endian = vout_serialized[..16].to_owned(); // first 8 bytes
     let amount_bytes: [u8; 8] = hex::decode(&amount_little_endian)
