@@ -84,7 +84,7 @@ impl Vin {
   /// ```
   ///
   pub fn serialize(&self) -> String {
-    let txid_in_le_bytes_form = helpers::hex_to_le_bytes(self.txid.clone());
+    let txid_in_le_bytes_form = helpers::hex_to_reverse_bytes(self.txid.clone());
     let vout_4_bytes = hex::encode(self.vout.to_be_bytes());
 
     let script_size_bytes_no_empty_zeroes: Vec<u8> =
@@ -102,6 +102,18 @@ impl Vin {
       sequence_number_4_bytes,
     )
   }
+
+  // pub fn deserialize(&self, serialized_vin: String) -> Self {
+  //   let transaction = helpers::hex_to_reverse_bytes(serialized_vin[..64].to_owned());
+  //   let vout: [u8; 4] = hex::decode(serialized_vin[64..96].to_owned()).unwrap().try_into().unwrap();
+  //   let vout = u32::from_be_bytes(vout);
+
+  //   Self {
+  //     txid: transaction,
+  //     vout,
+      
+  //   }
+  // }
 }
 
 /// Transacion Output (Vout)

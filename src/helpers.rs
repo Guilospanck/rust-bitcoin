@@ -324,9 +324,9 @@ pub fn print_derivation_path(dpath_string: &mut PathBuf, index: u32) {
   println!("{}", dpath_string.to_str().unwrap_or(""),);
 }
 
-/// Simple helper to get the Little Endian representation of
+/// Simple helper to get the Reverse Endian representation of
 /// a Hexadecimal string.
-pub fn hex_to_le_bytes(hex_value: String) -> String {
+pub fn hex_to_reverse_bytes(hex_value: String) -> String {
   let mut hex_value_in_bytes = hex::decode(&hex_value).unwrap();
   hex_value_in_bytes.reverse();
   hex::encode(hex_value_in_bytes)
@@ -350,4 +350,19 @@ pub fn get_even_hex_length_bytes(hex_string: String) -> Vec<u8> {
   }
 
   script_size_bytes_no_empty_zeroes
+}
+
+pub fn get_length_of_script_vin_or_vout() {
+  // for length_of_script in (2..rest_of_string_length).step_by(2) {
+  //   let current_script_len = vout_serialized[16..(16 + length_of_script)].to_owned();
+  //   let length_decimal = i64::from_str_radix(&current_script_len, 16).unwrap();
+  //   let length_of_soon_to_be_script = vout_serialized[(16 + length_of_script)..].len() as i64;
+
+  //   if length_decimal == (length_of_soon_to_be_script / 2)
+  //     || length_decimal == ((length_of_soon_to_be_script + 1) / 2)
+  //   {
+  //     index = length_of_script;
+  //     break;
+  //   }
+  // }
 }
