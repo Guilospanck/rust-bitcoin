@@ -1,6 +1,14 @@
 use crate::helpers;
 use serde::{Deserialize, Serialize};
 
+// VIN constants
+pub const VIN_TRANSACTION_HASH_LENGTH_HEX: usize = 64; // 32 bytes
+pub const VIN_VOUT_LENGTH_IN_HEX: usize = 8; // 4 bytes
+pub const VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX: usize = 8; // 4 bytes
+
+// Vout constants
+pub const VOUT_AMOUNT_LENGTH_IN_HEX: usize = 16; // 8 bytes
+
 /// Transactions in BTC work like currency inside your wallet.
 /// If you have, for example, US$ 2.00 in your wallet and you
 /// want to pay for some coffee that costs US$ 2.00, you'd just
@@ -103,17 +111,39 @@ impl Vin {
     )
   }
 
-  // pub fn deserialize(&self, serialized_vin: String) -> Self {
-  //   let transaction = helpers::hex_to_reverse_bytes(serialized_vin[..64].to_owned());
-  //   let vout: [u8; 4] = hex::decode(serialized_vin[64..96].to_owned()).unwrap().try_into().unwrap();
-  //   let vout = u32::from_be_bytes(vout);
+  pub fn deserialize(&self, serialized_vin: String) -> Self {
+    let serialized_vin_length = serialized_vin.len();
 
-  //   Self {
-  //     txid: transaction,
-  //     vout,
-      
-  //   }
-  // }
+    let transaction =
+      helpers::hex_to_reverse_bytes(serialized_vin[..VIN_TRANSACTION_HASH_LENGTH_HEX].to_owned());
+
+    let vout: [u8; 4] = hex::decode(
+      serialized_vin[VIN_TRANSACTION_HASH_LENGTH_HEX
+        ..(VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX)]
+        .to_owned(),
+    )
+    .unwrap()
+    .try_into()
+    .unwrap();
+    let vout = u32::from_be_bytes(vout);
+
+    let index = helpers::get_length_of_script_vin_or_vout(
+      serialized_vin[..(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)].to_owned(),
+      helpers::TransactionType::Vin,
+    );
+    let script_sig = serialized_vin[(VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX + index)..(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)].to_owned();
+
+    let sequence_number = serialized_vin[(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)..].to_owned();
+    let sequence_number: [u8; 4] = hex::decode(&sequence_number).unwrap().try_into().unwrap();
+    let sequence_number: u32 = u32::from_be_bytes(sequence_number);
+
+    Self {
+      txid: transaction,
+      vout,
+      script_sig,
+      sequence: sequence_number,
+    }
+  }
 }
 
 /// Transacion Output (Vout)
@@ -171,7 +201,7 @@ impl Vout {
   }
 
   /// Vout deserializer.
-  /// 
+  ///
   /// Example:
   /// ```rust
   /// let serialized = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
@@ -179,18 +209,21 @@ impl Vout {
   /// let deserialized = vout.deserialize(serialized);
   /// println!("{:?}", deserialized);
   /// ```
-  /// 
-  pub fn deserialize(&self, vout_serialized: String) -> Self {
-    let amount_little_endian = vout_serialized[..16].to_owned(); // first 8 bytes
+  ///
+  pub fn deserialize(&self, serialized_vout: String) -> Self {
+    let amount_little_endian = serialized_vout[..VOUT_AMOUNT_LENGTH_IN_HEX].to_owned(); // first 8 bytes
     let amount_bytes: [u8; 8] = hex::decode(&amount_little_endian)
       .unwrap()
       .try_into()
       .unwrap();
     let amount = i64::from_le_bytes(amount_bytes);
 
-    let index = helpers::get_length_of_script_vin_or_vout(vout_serialized.clone(), helpers::TransactionType::Vout);
+    let index = helpers::get_length_of_script_vin_or_vout(
+      serialized_vout.clone(),
+      helpers::TransactionType::Vout,
+    );
 
-    let script_pub_key = vout_serialized[(16 + index)..].to_owned();
+    let script_pub_key = serialized_vout[(VOUT_AMOUNT_LENGTH_IN_HEX + index)..].to_owned();
 
     Self {
       value: amount,

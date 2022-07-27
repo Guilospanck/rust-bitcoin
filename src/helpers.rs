@@ -11,7 +11,7 @@ use std::io::{prelude::*, BufReader};
 use std::path::PathBuf; // import without risk of name clashing
 
 use crate::block::BlockHeader;
-use crate::transaction::Transaction;
+use crate::transaction::{Transaction, VIN_TRANSACTION_HASH_LENGTH_HEX, VIN_VOUT_LENGTH_IN_HEX, VOUT_AMOUNT_LENGTH_IN_HEX};
 
 ///  Bitcoin’s difficulty level is the estimated number of hashes required to mine a block.
 ///
@@ -358,21 +358,18 @@ pub enum TransactionType {
 }
 
 pub fn get_length_of_script_vin_or_vout(serialized: String, transaction_type: TransactionType) -> usize {
-  match transaction_type {
-    TransactionType::Vin => 2_usize,
-    TransactionType::Vout => get_length_of_vout_script(serialized),
-  }
-}
+  let initial_values_length = match transaction_type {
+    TransactionType::Vin => VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX,
+    TransactionType::Vout => VOUT_AMOUNT_LENGTH_IN_HEX,
+  };
 
-// get script_pub_key (not happy in how this part is being written)
-pub fn get_length_of_vout_script(vout_serialized: String) -> usize {
-  let rest_of_string_length = vout_serialized[16..].len(); // removes amount (8 bytes = 16 chars in hexa)
+  let rest_of_string_length = serialized[initial_values_length..].len();
   let mut index = 2;
   
   for length_of_script in (2..rest_of_string_length).step_by(2) {
-    let current_script_len = vout_serialized[16..(16 + length_of_script)].to_owned();
+    let current_script_len = serialized[initial_values_length..(initial_values_length + length_of_script)].to_owned();
     let length_decimal = i64::from_str_radix(&current_script_len, 16).unwrap();
-    let length_of_soon_to_be_script = vout_serialized[(16 + length_of_script)..].len() as i64;
+    let length_of_soon_to_be_script = serialized[(initial_values_length + length_of_script)..].len() as i64;
 
     if length_decimal == (length_of_soon_to_be_script / 2)
       || length_decimal == ((length_of_soon_to_be_script + 1) / 2)
@@ -383,4 +380,5 @@ pub fn get_length_of_vout_script(vout_serialized: String) -> usize {
   }
 
   index
+
 }

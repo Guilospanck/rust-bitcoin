@@ -153,12 +153,16 @@ fn main() {
   let serialized = vin.serialize();
   println!("Vin serialized: {}\n", serialized);
 
+  let vin = transaction::Vin::new();
+  let deserialized = vin.deserialize(serialized);
+  println!("{:?}\n", deserialized);
+
   let mut vout = transaction::Vout::new();
   vout.value = 1_500_000; // in satoshis
   vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
 
   let serialized = vout.serialize();
-  println!("Vout serialized: {}", serialized);
+  println!("Vout serialized: {}\n", serialized);
 
   let vout = transaction::Vout::new();
   let deserialized = vout.deserialize(serialized);
