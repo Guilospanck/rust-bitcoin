@@ -113,14 +113,15 @@ impl Vin {
 
   pub fn deserialize(&self, serialized_vin: String) -> Self {
     let serialized_vin_length = serialized_vin.len();
+    let serialized_vin_without_sequence_number_length =
+      serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX;
 
     let transaction =
       helpers::hex_to_reverse_bytes(serialized_vin[..VIN_TRANSACTION_HASH_LENGTH_HEX].to_owned());
 
     let vout: [u8; 4] = hex::decode(
-      serialized_vin[VIN_TRANSACTION_HASH_LENGTH_HEX
-        ..(VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX)]
-        .to_owned(),
+      &serialized_vin[VIN_TRANSACTION_HASH_LENGTH_HEX
+        ..(VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX)],
     )
     .unwrap()
     .try_into()
@@ -128,12 +129,16 @@ impl Vin {
     let vout = u32::from_be_bytes(vout);
 
     let index = helpers::get_length_of_script_vin_or_vout(
-      serialized_vin[..(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)].to_owned(),
+      serialized_vin[..serialized_vin_without_sequence_number_length].to_owned(),
       helpers::TransactionType::Vin,
     );
-    let script_sig = serialized_vin[(VIN_TRANSACTION_HASH_LENGTH_HEX + VIN_VOUT_LENGTH_IN_HEX + index)..(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)].to_owned();
+    let script_sig = serialized_vin[(VIN_TRANSACTION_HASH_LENGTH_HEX
+      + VIN_VOUT_LENGTH_IN_HEX
+      + index)..serialized_vin_without_sequence_number_length]
+      .to_owned();
 
-    let sequence_number = serialized_vin[(serialized_vin_length - VIN_SEQUENCE_NUMBER_LENGTH_IN_HEX)..].to_owned();
+    let sequence_number =
+      serialized_vin[serialized_vin_without_sequence_number_length..].to_owned();
     let sequence_number: [u8; 4] = hex::decode(&sequence_number).unwrap().try_into().unwrap();
     let sequence_number: u32 = u32::from_be_bytes(sequence_number);
 
