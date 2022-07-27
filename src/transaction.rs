@@ -1,3 +1,5 @@
+use std::clone;
+
 use crate::helpers;
 use serde::{Deserialize, Serialize};
 
@@ -188,21 +190,7 @@ impl Vout {
       .unwrap();
     let amount = i64::from_le_bytes(amount_bytes);
 
-    // get script_pub_key (not happy in how this part is being written)
-    let rest_of_string_length = vout_serialized[16..].len();
-    let mut index = 2;
-    for length_of_script in (2..rest_of_string_length).step_by(2) {
-      let current_script_len = vout_serialized[16..(16 + length_of_script)].to_owned();
-      let length_decimal = i64::from_str_radix(&current_script_len, 16).unwrap();
-      let length_of_soon_to_be_script = vout_serialized[(16 + length_of_script)..].len() as i64;
-
-      if length_decimal == (length_of_soon_to_be_script / 2)
-        || length_decimal == ((length_of_soon_to_be_script + 1) / 2)
-      {
-        index = length_of_script;
-        break;
-      }
-    }
+    let index = helpers::get_length_of_script_vin_or_vout(vout_serialized.clone(), helpers::TransactionType::Vout);
 
     let script_pub_key = vout_serialized[(16 + index)..].to_owned();
 
