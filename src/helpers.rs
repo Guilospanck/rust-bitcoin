@@ -359,7 +359,7 @@ pub enum TransactionType {
 
 pub fn get_length_of_script_vin_or_vout(serialized: String, transaction_type: TransactionType) -> usize {
   match transaction_type {
-    TransactionType::Vin => 2 as usize,
+    TransactionType::Vin => 2_usize,
     TransactionType::Vout => get_length_of_vout_script(serialized),
   }
 }
