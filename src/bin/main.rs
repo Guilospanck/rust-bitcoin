@@ -192,6 +192,4 @@ fn main() {
 
   let serialized_tx = transaction_test.serialize();
   println!("{}", serialized_tx);
-
 }
-
