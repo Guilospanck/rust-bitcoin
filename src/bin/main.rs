@@ -167,4 +167,31 @@ fn main() {
   let vout = transaction::Vout::new();
   let deserialized = vout.deserialize(serialized);
   println!("{:?}", deserialized);
+
+  println!("\n\n");
+  //
+  let mut vin = transaction::Vin::new();
+  vin.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
+  vin.vout = 0;
+  vin.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
+  vin.sequence = 4294967295;
+
+  let mut vout = transaction::Vout::new();
+  vout.value = 1_500_000; // in satoshis
+  vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+
+  let mut sec_vout = transaction::Vout::new();
+  sec_vout.value = 8_450_000; // in satoshis
+  sec_vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+
+  let mut transaction_test = transaction::Transaction::new();
+  transaction_test.version = 1i32;
+  transaction_test.vins = vec![vin];
+  transaction_test.vouts = vec![vout, sec_vout];
+  transaction_test.locktime = 0u32;
+
+  let serialized_tx = transaction_test.serialize();
+  println!("{}", serialized_tx);
+
 }
+

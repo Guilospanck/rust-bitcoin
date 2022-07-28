@@ -33,12 +33,104 @@ pub const VOUT_AMOUNT_LENGTH_IN_HEX: usize = 16; // 8 bytes
 ///       Unlocking Script + Locking Script
 /// And then evaluates then. If the result is true, the transaction is valid. Otherwise, is not.
 ///
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Transaction {
-  version: i32,
-  vins: Vec<Vin>,
-  vouts: Vec<Vout>,
-  locktime: u32,
+  pub version: i32,
+  pub vins: Vec<Vin>,
+  pub vouts: Vec<Vout>,
+  pub locktime: u32,
+}
+
+impl Transaction {
+  pub fn new() -> Self {
+    Self { version: Default::default(), vins: Default::default(), vouts: Default::default(), locktime: Default::default() }
+  }
+
+  /// Serializes a transaction.
+  /// 
+  /// ### Example:
+  /// 
+  /// ```rust
+  /// let mut vin = btc::transaction::Vin::new();
+  /// vin.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
+  /// vin.vout = 0;
+  /// vin.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
+  /// vin.sequence = 4294967295;
+
+  /// let mut vout = btc::transaction::Vout::new();
+  /// vout.value = 1_500_000; // in satoshis
+  /// vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+
+  /// let mut sec_vout = btc::transaction::Vout::new();
+  /// sec_vout.value = 8_450_000; // in satoshis
+  /// sec_vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+
+  /// let mut transaction_test = btc::transaction::Transaction::new();
+  /// transaction_test.version = 1i32;
+  /// transaction_test.vins = vec![vin];
+  /// transaction_test.vouts = vec![vout, sec_vout];
+  /// transaction_test.locktime = 0u32;
+
+  /// let serialized_tx = transaction_test.serialize();
+  /// let expected_serialized_tx = "0100000001186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779000000008b483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adfffffffff0260e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788acd0ef8000000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac00000000".to_owned();
+  /// 
+  /// assert_eq!(serialized_tx, expected_serialized_tx);
+  /// ```
+  /// 
+  /// ### Docs:
+  /// |                                    Value                                   |      Meaning      |
+  /// | -------------------------------------------------------------------------- | ----------------- |
+  /// |                                  01000000                                  |       version     |
+  /// |                                  --                                        |      --           |
+  /// |                                  01                                        |   number of vins  |
+  /// |   186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779         |    txid           |
+  /// |                                  00000000                                        |    vout index     |
+  /// |                                  8b                                        |    script_sig size (hex of bytes)     |
+  /// | 483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb
+  ///   6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863
+  ///   ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a
+  ///   0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41
+  ///    c04f4938de5cc17b4a10fa336a8d752adf                                        |    script_sig     |
+  /// |                                  ffffffff                                        |    sequence     |
+  /// |                                  --                                        |      --   |
+  /// |                                  02                                        |    number of vouts     |
+  /// |                                  60e3160000000000                                        |    first vout amount in hex little endian (1_500_000)     |
+  /// |                                  19                                        |    script pub key size in hex = 25 bytes    |
+  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                                        |    script pub key     |
+  /// |                                  d0ef800000000000                                        |    second vout amount in hex little endian (8_450_000)     |
+  /// |                                  19                                        |    script pub key size in hex = 25 bytes    |
+  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                                        |    script pub key     |
+  /// |                                  --                                        |      --   |
+  /// |     00000000                                        |    locktime     |
+  ///
+  pub fn serialize(&self) -> String {
+    let version_serialized = hex::encode(self.version.to_le_bytes());
+
+    let vins_length = format!("{:02x}", self.vins.len());
+
+    let mut vins_serialized = String::new();
+    for vin in &self.vins {
+      vins_serialized.push_str(&vin.serialize());
+    }
+
+    let vouts_length = format!("{:02x}", self.vouts.len());
+
+    let mut vouts_serialized = String::new();
+    for vout in &self.vouts {
+      vouts_serialized.push_str(&vout.serialize());
+    }
+
+    let locktime_serialized = hex::encode(self.locktime.to_le_bytes());
+
+    format!("{}{}{}{}{}{}",
+      version_serialized,
+      vins_length,
+      vins_serialized,
+      vouts_length,
+      vouts_serialized,
+      locktime_serialized,
+    )
+  }
 }
 
 /// Transaction Input (Vin)
@@ -185,7 +277,7 @@ impl Vin {
 ///
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct Vout {
-  pub value: i64,             // in satoshis
+  pub value: u64,             // in satoshis
   pub script_pub_key: String, // cryptographic puzzle, witness script, locking script
 }
 
@@ -242,7 +334,7 @@ impl Vout {
       .unwrap()
       .try_into()
       .unwrap();
-    let amount = i64::from_le_bytes(amount_bytes);
+    let amount = u64::from_le_bytes(amount_bytes);
 
     let index = helpers::get_length_of_script_vin_or_vout(
       serialized_vout.clone(),
