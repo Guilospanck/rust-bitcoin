@@ -59,7 +59,7 @@ pub struct Transaction {
 /// - Variable                           | Unlocking-Script      | A script that fulfills the conditions of the UTXO locking script
 /// - 4 bytes                            | Sequence Number       | Used for locktime or disabled (0xFFFFFFFF)
 ///
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct Vin {
   pub txid: String,
   pub vout: u32,
@@ -80,7 +80,7 @@ impl Vin {
   /// Serializes a Vin.
   ///
   /// ```rust
-  /// let mut vin = transaction::Vin::new();
+  /// let mut vin = btc::transaction::Vin::new();
   /// vin.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
   /// vin.vout = 0;
   /// vin.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
@@ -111,6 +111,22 @@ impl Vin {
     )
   }
 
+  /// Deserializes a vin.
+  /// 
+  /// ```rust
+  /// let mut vin_expected = btc::transaction::Vin::new();
+  /// vin_expected.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
+  /// vin_expected.vout = 0;
+  /// vin_expected.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
+  /// vin_expected.sequence = 4294967295;
+  /// 
+  /// let vin = btc::transaction::Vin::new();
+  /// let serialized = "186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779000000008b483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adfffffffff".to_owned();
+  /// let deserialized = vin.deserialize(serialized);
+  /// 
+  /// assert_eq!(deserialized, vin_expected);
+  ///
+  /// ```
   pub fn deserialize(&self, serialized_vin: String) -> Self {
     let serialized_vin_length = serialized_vin.len();
     let serialized_vin_without_sequence_number_length =
@@ -167,7 +183,7 @@ impl Vin {
 /// - 1-9 bytes (VarInt)      | Locking-Script Size | Locking-Script size in bytes
 /// - Variable                | Locking-Script      | Defines the conditions needed to spend the output
 ///
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct Vout {
   pub value: i64,             // in satoshis
   pub script_pub_key: String, // cryptographic puzzle, witness script, locking script
@@ -185,7 +201,7 @@ impl Vout {
   ///
   /// Example:
   /// ```rust
-  /// let mut vout: Vout = transaction::Vout::new();
+  /// let mut vout = btc::transaction::Vout::new();
   /// vout.value = 1_500_000; // in satoshis
   /// vout.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
   ///
@@ -209,10 +225,15 @@ impl Vout {
   ///
   /// Example:
   /// ```rust
+  /// let mut vout_expected = btc::transaction::Vout::new();
+  /// vout_expected.value = 1_500_000; // in satoshis
+  /// vout_expected.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
+  /// 
   /// let serialized = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
-  /// let vout = transaction::Vout::new();
+  /// let vout = btc::transaction::Vout::new();
   /// let deserialized = vout.deserialize(serialized);
-  /// println!("{:?}", deserialized);
+  /// 
+  /// assert_eq!(deserialized, vout_expected);
   /// ```
   ///
   pub fn deserialize(&self, serialized_vout: String) -> Self {
