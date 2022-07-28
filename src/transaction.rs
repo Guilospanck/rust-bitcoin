@@ -112,18 +112,18 @@ impl Vin {
   }
 
   /// Deserializes a vin.
-  /// 
+  ///
   /// ```rust
   /// let mut vin_expected = btc::transaction::Vin::new();
   /// vin_expected.txid = "7957a35fe64f80d234d76d83a2a8f1a0d8149a41d81de548f0a65a8a999f6f18".to_owned();
   /// vin_expected.vout = 0;
   /// vin_expected.script_sig = "483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adf".to_owned();
   /// vin_expected.sequence = 4294967295;
-  /// 
+  ///
   /// let vin = btc::transaction::Vin::new();
   /// let serialized = "186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779000000008b483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41c04f4938de5cc17b4a10fa336a8d752adfffffffff".to_owned();
   /// let deserialized = vin.deserialize(serialized);
-  /// 
+  ///
   /// assert_eq!(deserialized, vin_expected);
   ///
   /// ```
@@ -228,11 +228,11 @@ impl Vout {
   /// let mut vout_expected = btc::transaction::Vout::new();
   /// vout_expected.value = 1_500_000; // in satoshis
   /// vout_expected.script_pub_key = "76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
-  /// 
+  ///
   /// let serialized = "60e31600000000001976a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac".to_owned();
   /// let vout = btc::transaction::Vout::new();
   /// let deserialized = vout.deserialize(serialized);
-  /// 
+  ///
   /// assert_eq!(deserialized, vout_expected);
   /// ```
   ///
