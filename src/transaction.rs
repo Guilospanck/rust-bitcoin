@@ -83,30 +83,30 @@ impl Transaction {
   /// ```
   ///
   /// ### Docs:
-  /// |                                    Value                                   |      Meaning      |
-  /// | -------------------------------------------------------------------------- | ----------------- |
-  /// |                                  01000000                                  |       version     |
-  /// |                                  --                                        |      --           |
-  /// |                                  01                                        |   number of vins  |
-  /// |   186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779         |    txid           |
-  /// |                                  00000000                                        |    vout index     |
-  /// |                                  8b                                        |    script_sig size (hex of bytes)     |
-  /// | 483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb
-  ///   6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863
-  ///   ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a
-  ///   0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41
-  ///    c04f4938de5cc17b4a10fa336a8d752adf                                        |    script_sig     |
-  /// |                                  ffffffff                                        |    sequence     |
-  /// |                                  --                                        |      --   |
-  /// |                                  02                                        |    number of vouts     |
-  /// |                                  60e3160000000000                                        |    first vout amount in hex little endian (1_500_000)     |
-  /// |                                  19                                        |    script pub key size in hex = 25 bytes    |
-  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                                        |    script pub key     |
-  /// |                                  d0ef800000000000                                        |    second vout amount in hex little endian (8_450_000)     |
-  /// |                                  19                                        |    script pub key size in hex = 25 bytes    |
-  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                                        |    script pub key     |
-  /// |                                  --                                        |      --   |
-  /// |     00000000                                        |    locktime     |
+  /// |                                    Value                                   |                        Meaning                             |
+  /// | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+  /// |                                  01000000                                  |    version                                                 |
+  /// | -------------------------------------------------------------------------- |    ------------------------------------------------------- |
+  /// |                                  01                                        |   number of vins                                           |
+  /// |   186f9f998a5aa6f048e51dd8419a14d8a0f1a8a2836dd734d2804fe65fa35779         |   txid                                                     |
+  /// |                                  00000000                                  |   vout index                                               |
+  /// |                                  8b                                        |   script_sig size (hex of bytes)                           |
+  /// | 483045022100884d142d86652a3f47ba4746ec719bbfbd040a570b1deccbb              |                                                            |
+  /// | 6498c75c4ae24cb02204b9f039ff08df09cbe9f6addac960298cad530a863              |                                                            |
+  /// | ea8f53982c09db8f6e381301410484ecc0d46f1918b30928fa0e4ed99f16a              |    script_sig                                              |                                                            
+  /// | 0fb4fde0735e7ade8416ab9fe423cc5412336376789d172787ec3457eee41              |                                                            |
+  /// | c04f4938de5cc17b4a10fa336a8d752adf                                         |                                                            |
+  /// |                                  ffffffff                                  |    sequence                                                |
+  /// | -------------------------------------------------------------------------- |    ------------------------------------------------------- |
+  /// |                                  02                                        |    number of vouts                                         |
+  /// |                                  60e3160000000000                          |    first vout amount in hex little endian (1_500_000)      |
+  /// |                                  19                                        |    script pub key size in hex = 25 bytes                   |
+  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                     |    script pub key                                          |
+  /// |                                  d0ef800000000000                          |    second vout amount in hex little endian (8_450_000)     |
+  /// |                                  19                                        |    script pub key size in hex = 25 bytes                   |
+  /// |     76a914ab68025513c3dbd2f7b92a94e0581f5d50f654e788ac                     |    script pub key                                          |
+  /// | -------------------------------------------------------------------------- |    ------------------------------------------------------- |  
+  /// |                                 00000000                                   |    locktime                                                |
   ///
   pub fn serialize(&self) -> String {
     let version_serialized = hex::encode(self.version.to_le_bytes());
