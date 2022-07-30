@@ -1,6 +1,10 @@
 use crate::helpers;
 use serde::{Deserialize, Serialize};
 
+// Transaction constants
+pub const TX_VERSION_LENGTH_IN_HEX: usize = 8; // 4 bytes
+pub const TX_NUM_OF_VINS_OR_VOUTS_LENGTH_IN_HEX: usize = 2; // 1 byte
+
 // VIN constants
 pub const VIN_TRANSACTION_HASH_LENGTH_HEX: usize = 64; // 32 bytes
 pub const VIN_VOUT_LENGTH_IN_HEX: usize = 8; // 4 bytes
@@ -136,6 +140,75 @@ impl Transaction {
       vouts_serialized,
       locktime_serialized,
     )
+  }
+
+  pub fn deserialize(&self, serialized: String) -> Self {
+    const VERSION_PLUS_NUM_OF_VINS_LENGTH_IN_HEX: usize =
+      TX_VERSION_LENGTH_IN_HEX + TX_NUM_OF_VINS_OR_VOUTS_LENGTH_IN_HEX;
+    const PLUS_TXID_LENGTH_IN_HEX: usize =
+      VERSION_PLUS_NUM_OF_VINS_LENGTH_IN_HEX + VIN_TRANSACTION_HASH_LENGTH_HEX;
+    const PLUS_VIN_VOUT_LENGTH_IN_HEX: usize = PLUS_TXID_LENGTH_IN_HEX + VIN_VOUT_LENGTH_IN_HEX;
+
+    let version: [u8; 4] = hex::decode(&serialized[..TX_VERSION_LENGTH_IN_HEX])
+      .unwrap()
+      .try_into()
+      .unwrap();
+    let version = i32::from_le_bytes(version);
+
+    let number_of_vins = u32::from_str_radix(
+      &serialized[TX_VERSION_LENGTH_IN_HEX..VERSION_PLUS_NUM_OF_VINS_LENGTH_IN_HEX],
+      16,
+    )
+    .unwrap();
+
+    let mut vins: Vec<Vin> = Vec::new();
+
+    for _ in 0..number_of_vins {
+      let txid = helpers::hex_to_reverse_bytes(
+        serialized[VERSION_PLUS_NUM_OF_VINS_LENGTH_IN_HEX..PLUS_TXID_LENGTH_IN_HEX].to_string(),
+      );
+
+      let vout: [u8; 4] =
+        hex::decode(&serialized[PLUS_TXID_LENGTH_IN_HEX..PLUS_VIN_VOUT_LENGTH_IN_HEX])
+          .unwrap()
+          .try_into()
+          .unwrap();
+      let vout = u32::from_be_bytes(vout);
+
+      let unlocking_script_size = u64::from_str_radix(
+        &serialized[PLUS_VIN_VOUT_LENGTH_IN_HEX
+          ..(PLUS_VIN_VOUT_LENGTH_IN_HEX + TX_NUM_OF_VINS_OR_VOUTS_LENGTH_IN_HEX)],
+        16,
+      )
+      .unwrap();
+
+      let unlocking_script = serialized[84..(84 + unlocking_script_size as usize)].to_string();
+
+      let sequence_number: [u8; 4] = hex::decode(
+        &serialized
+          [(84 + unlocking_script_size as usize)..(84 + unlocking_script_size as usize + 8)],
+      )
+      .unwrap()
+      .try_into()
+      .unwrap();
+      let sequence_number = u32::from_be_bytes(sequence_number);
+
+      let vin = Vin {
+        txid,
+        vout,
+        script_sig: unlocking_script,
+        sequence: sequence_number,
+      };
+
+      vins.push(vin);
+    }
+
+    Self {
+      version,
+      vins,
+      vouts: Vec::new(),
+      locktime: 0u32,
+    }
   }
 }
 
